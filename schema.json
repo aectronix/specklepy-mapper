@@ -1,0 +1,15 @@
+{
+	"revit": {
+		"level": {
+			"index": null,
+			"name": null,
+			"elevation": null,
+			"units": "m",
+			"category": "Levels",
+			"createView": true,
+			"speckle_type": "Objects.BuiltElements.Level:Objects.BuiltElements.Revit.RevitLevel",
+			"referenceOnly": false,
+			"builtInCategory": "OST_Levels"
+		}
+	}
+}
