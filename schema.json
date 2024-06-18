@@ -1,5 +1,15 @@
 {
 	"revit": {
+		"column": {
+			"category": "Structural Columns",
+			"builtInCategory": "OST_StructuralColumns",
+			"type": "column",
+			"speckle_type": "Objects.BuiltElements.Column:Objects.BuiltElements.Revit.RevitColumn",
+			"topLevel": null,
+			"baseOffset": null,
+			"topOffset": null,
+			"rotation": null
+		},
 		"level": {
 			"index": null,
 			"name": null,

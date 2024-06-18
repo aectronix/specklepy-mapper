@@ -1,5 +1,7 @@
 import json
 import os
+import re
+
 from abc import ABC, abstractmethod
 from specklepy.objects.base import Base
 from specklepy.serialization.base_object_serializer import BaseObjectSerializer
@@ -45,9 +47,50 @@ class TranslatorArchicad2Revit(Translator):
 		self.wrapper = wrapper
 		self.schema = self.get_schema()[self.target]
 
+	def map_column(self, obj, selection, parameters=None):
+
+		bos = BaseObjectSerializer()
+		top = BaseObjectSerializer()
+		column = bos.traverse_base(obj)[1]
+
+		# need to retrieve top link info
+		top_link = None
+		top_link_story = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [parameters['properties']['TopLinkStory']])
+
+		if top_link_story and not hasattr(top_link_story[0].propertyValues[0], 'error'):
+			top_link_ref = re.search(r'Home \+ (\d+).*\((.*?)\)', top_link_story[0].propertyValues[0].propertyValue.value)
+
+		if top_link_ref:
+			top_link_range = int(top_link_ref.group(1))
+			top_link_index = column['level']['index'] + top_link_range
+			top_link = top.traverse_base(parameters['levels'][top_link_index])[1]
+
+		if top_link == None:
+			top_link = column['level']
+			column['topOffset'] = column['height']
+
+		inputs = {
+			'topLevel': top_link,
+			'rotation': column['slantDirectionAngle'],
+			'baseOffset': column['bottomOffset'],
+			'topOffset': column['topOffset'],
+		}
+
+		schema = self.schema['column']
+		for key, value in schema.items():
+			column[key] = inputs[key] if key in inputs else value
+
+		obj = bos.recompose_base(column)
+
+		return obj
+
+	def map_slab(self, obj, selection):
+
+		print ('slab')
+
 	def map_levels(self, obj):
 
-		obj['@levels'] = []
+		obj['@levels'] = {}
 
 		def new_level(schema, index, name, elevation):
 
@@ -58,7 +101,7 @@ class TranslatorArchicad2Revit(Translator):
 				level[key] = value
 
 			if not name:
-				name = 'level-' + str(index)
+				name = str(index) + ' level on ' + str(elevation * 1000)
 
 			level['index'] = index
 			level['name'] = name
@@ -70,6 +113,9 @@ class TranslatorArchicad2Revit(Translator):
 		stories = story_info['stories']
 		for story in stories[::-1]:
 			level = new_level(self.schema['level'], story['index'], story['uName'], story['level'])
-			obj['@levels'].append(level)
+			# obj['@levels'].append(level)
+			obj['@levels'][story['index']] = level
 
 
+			# todo: according to level idx
+			# todo: deal with unconnected
