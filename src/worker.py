@@ -25,7 +25,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', 'c4150005f3')
+		commit = self.speckle.retrieve('aeb487f0e6', 'aa4273b925')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		propId_TopLinkStory = self.archicad.utilities.GetBuiltInPropertyId('General_TopLinkStory')
@@ -61,4 +61,4 @@ class Worker():
 					elements[i] = obj_remapped
 
 
-		self.speckle.publish(commit, 'columns exp 1c')
+		# self.speckle.publish(commit, 'columns exp 1')

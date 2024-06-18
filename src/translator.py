@@ -47,30 +47,49 @@ class TranslatorArchicad2Revit(Translator):
 		self.wrapper = wrapper
 		self.schema = self.get_schema()[self.target]
 
-	def map_column(self, obj, selection, parameters=None):
+		self.propIds = self.get_prop_ids()
 
-		bos = BaseObjectSerializer()
-		top = BaseObjectSerializer()
-		column = bos.traverse_base(obj)[1]
+	def get_prop_ids(self):
 
-		# need to retrieve top link info
-		top_link = None
-		top_link_story = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [parameters['properties']['TopLinkStory']])
+		propIds = {
+			'General_TopLinkStory': self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
+		}
 
+		return propIds
+
+	#def get_prop_values(self):	todo
+
+	def get_top_level(self, obj, selection, parameters=None):
+		"""
+		Retrieves topLevel instance for picked element, if exists.
+		"""
+		top_link_story = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopLinkStory']])
+		
 		if top_link_story and not hasattr(top_link_story[0].propertyValues[0], 'error'):
 			top_link_ref = re.search(r'Home \+ (\d+).*\((.*?)\)', top_link_story[0].propertyValues[0].propertyValue.value)
 
-		if top_link_ref:
-			top_link_range = int(top_link_ref.group(1))
-			top_link_index = column['level']['index'] + top_link_range
-			top_link = top.traverse_base(parameters['levels'][top_link_index])[1]
+			if top_link_ref:
+				top_link_range = int(top_link_ref.group(1))
+				top_link_index = obj['level']['index'] + top_link_range
+				return BaseObjectSerializer().traverse_base(parameters['levels'][top_link_index])[1]
 
-		if top_link == None:
-			top_link = column['level']
+		return None
+
+	def map_column(self, obj, selection, parameters=None):
+		"""
+		Remap column schema.
+		"""
+		bos = BaseObjectSerializer()
+		column = bos.traverse_base(obj)[1]
+
+		# need to retrieve top link info
+		top_level = self.get_top_level(obj, selection, parameters)
+		if top_level == None:
+			top_level = column['level']
 			column['topOffset'] = column['height']
 
 		inputs = {
-			'topLevel': top_link,
+			'topLevel': top_level,
 			'rotation': column['slantDirectionAngle'],
 			'baseOffset': column['bottomOffset'],
 			'topOffset': column['topOffset'],
@@ -80,9 +99,7 @@ class TranslatorArchicad2Revit(Translator):
 		for key, value in schema.items():
 			column[key] = inputs[key] if key in inputs else value
 
-		obj = bos.recompose_base(column)
-
-		return obj
+		return bos.recompose_base(column)
 
 	def map_slab(self, obj, selection):
 
