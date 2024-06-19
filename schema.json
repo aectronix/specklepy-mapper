@@ -3,23 +3,23 @@
 		"column": {
 			"category": "Structural Columns",
 			"builtInCategory": "OST_StructuralColumns",
-			"type": "column",
 			"speckle_type": "Objects.BuiltElements.Column:Objects.BuiltElements.Revit.RevitColumn",
+			"type": null,
 			"topLevel": null,
 			"baseOffset": null,
 			"topOffset": null,
 			"rotation": null
 		},
 		"level": {
+			"category": "Levels",
+			"builtInCategory": "OST_Levels",
+			"speckle_type": "Objects.BuiltElements.Level:Objects.BuiltElements.Revit.RevitLevel",
+			"units": "m",
 			"index": null,
 			"name": null,
 			"elevation": null,
-			"units": "m",
-			"category": "Levels",
 			"createView": true,
-			"speckle_type": "Objects.BuiltElements.Level:Objects.BuiltElements.Revit.RevitLevel",
-			"referenceOnly": false,
-			"builtInCategory": "OST_Levels"
+			"referenceOnly": false
 		}
 	}
 }

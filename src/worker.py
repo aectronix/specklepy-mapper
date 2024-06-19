@@ -28,8 +28,6 @@ class Worker():
 		commit = self.speckle.retrieve('aeb487f0e6', 'aa4273b925')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
-		propId_TopLinkStory = self.archicad.utilities.GetBuiltInPropertyId('General_TopLinkStory')
-
 		# level structure
 		a2r.map_levels(commit)
 
@@ -38,6 +36,12 @@ class Worker():
 		print (len(selection))
 		selection_types = self.archicad.commands.GetTypesOfElements(selection)
 		selection_types = sorted(selection_types, key=lambda x: x.typeOfElement.elementType)
+
+		parameters = {
+			'column': {
+				'levels': commit['@levels']
+			}
+		}
 
 		# go through selection, deal with each type of elements
 		for selected in selection_types:
@@ -48,15 +52,8 @@ class Worker():
 			for i in range(0, len(elements)):
 				if element_guid.lower() == elements[i]['applicationId'].lower():
 
-					parameters = {
-						'properties': {
-							'TopLinkStory': propId_TopLinkStory
-						},
-						'levels': commit['@levels']
-					}
-
 					mapper = getattr(a2r, 'map_' + element_type)
-					obj_remapped = mapper(elements[i], selected, parameters)
+					obj_remapped = mapper(elements[i], selected, parameters[element_type])
 
 					elements[i] = obj_remapped
 
