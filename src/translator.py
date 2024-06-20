@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 
@@ -71,6 +72,25 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		return propIds
+
+	def get_direction(self, line):
+		# delta
+		dx = line['end']['x'] - line['start']['x']
+		dy = line['end']['y'] - line['start']['y']
+		# magnitude
+		vm = math.sqrt(dx**2 + dy**2)
+		# vector direction
+		vx = dx / vm
+		vy = dy / vm
+
+		# print('(' + str(line['start']['x']) + ':' + str(line['start']['y']) +  ') >> (' + str(line['end']['x']) + ':' + str(line['end']['y']) + ')')
+		# print(f'v={vx}:{vy}')
+
+		return {'x': vx, 'y': vy}
+
+	# def get_normale(self, vector):
+
+	# 	print ()
 
 	#def get_prop_values(self):	todo
 
@@ -159,6 +179,57 @@ class TranslatorArchicad2Revit(Translator):
 		floor = self.upd_schema(floor, self.schema['floor'], overrides)
 
 		return bos.recompose_base(floor)
+
+	def map_wall(self, obj, selection, parameters=None):
+		"""
+		Remap slab schema.
+		"""
+		bos = BaseObjectSerializer()
+		wall = bos.traverse_base(obj)[1]
+		# print (str(wall['referenceLineStartIndex']) + ' -> ' + str(wall['referenceLineEndIndex']))
+
+		ref_cases = {
+			'Center': 0,		# Wall Centerline
+			'Core Center': 1,	# Core Centerline
+			'Outside': 2,		# Finish Face: Exterior
+			'Inside': 3,		# Finish Face: Interior
+			'Core Outside': 4,	# Core Face: Exterior
+			'Core Inside': 5	# Core Face: Inside
+		}
+
+		sx = wall['baseLine']['start']['x']
+		sy = wall['baseLine']['start']['y']
+		ex = wall['baseLine']['end']['x']
+		ey = wall['baseLine']['end']['y']
+
+		fix = wall['thickness'] / 2
+		out = wall['offsetFromOutside'] if wall['offsetFromOutside'] else 0
+
+		flip = -1 if wall['flipped'] == True else 1
+		direction = self.get_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
+
+		off_x = (out - fix) * direction['y'] * flip * -1
+		off_y = (out - fix) * direction['x'] * flip
+
+		overrides = {
+			'type': wall['structure'] + ' Wall',
+			'parameters': {
+				'WALL_KEY_REF_PARAM': {
+					'value': ref_cases[wall['referenceLineLocation']]
+				}
+			},
+			'baseLine': {
+				'start': {'x': sx + off_x, 'y': sy + off_y},
+				'end': {'x': ex + off_x, 'y': ey  + off_y}
+			}
+		}
+
+		wall = self.upd_schema(wall, self.schema['wall'], overrides)
+
+		return bos.recompose_base(wall)
+
+
+
 
 	def map_levels(self, obj):
 

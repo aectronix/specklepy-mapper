@@ -25,7 +25,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', 'f0a47599b0')
+		commit = self.speckle.retrieve('aeb487f0e6', 'abb51feb50')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -62,4 +62,4 @@ class Worker():
 					elements[i] = obj_remapped
 
 
-		self.speckle.publish(commit, 'exp 2')
+		self.speckle.publish(commit, 'walls exp 4d')

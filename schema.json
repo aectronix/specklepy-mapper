@@ -69,6 +69,43 @@
 					"value": 0
 				}
 			}
+		},
+		"wall": {
+			"category": "Walls",
+			"builtInCategory": "OST_Walls",
+			"speckle_type": "Objects.BuiltElements.Wall:Objects.BuiltElements.Revit.RevitWall",
+			"family": "Basic Wall",
+			"type": null,
+			"topLevel": null,
+			"baseOffset": null,
+			"topOffset": null,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"WALL_KEY_REF_PARAM": {
+					"name": "Location Line",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "WALL_KEY_REF_PARAM",
+					"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": "m",
+					"value": 0
+				}
+			},
+			"baseLine": {
+				"start": {
+					"x": null,
+					"y": null
+				},
+				"end": {
+					"x": null,
+					"y": null
+				}
+			}
 		}
 	}
 }
