@@ -25,8 +25,12 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', 'aa4273b925')
+		commit = self.speckle.retrieve('aeb487f0e6', 'f32d74d563')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
+
+		types = {}
+		for e in commit['elements']:
+			types[e.name.lower()] = e
 
 		# level structure
 		a2r.map_levels(commit)
@@ -45,17 +49,17 @@ class Worker():
 
 		# go through selection, deal with each type of elements
 		for selected in selection_types:
-			elements = commit['elements'][0]['elements']
 			element_guid = str(selected.typeOfElement.elementId.guid)
 			element_type = str(selected.typeOfElement.elementType).lower()
+			elements = types[element_type]['elements']
 
 			for i in range(0, len(elements)):
-				if element_guid.lower() == elements[i]['applicationId'].lower():
+				if elements[i]['applicationId'] and element_guid.lower() == elements[i]['applicationId'].lower():
 
 					mapper = getattr(a2r, 'map_' + element_type)
-					obj_remapped = mapper(elements[i], selected, parameters[element_type])
+					obj_remapped = mapper(elements[i], selected, parameters[element_type] if element_type in parameters else None)
 
 					elements[i] = obj_remapped
 
 
-		# self.speckle.publish(commit, 'columns exp 1')
+		self.speckle.publish(commit, 'exp 2')
