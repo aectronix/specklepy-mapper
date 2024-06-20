@@ -10,17 +10,6 @@
 			"topOffset": null,
 			"rotation": null
 		},
-		"level": {
-			"category": "Levels",
-			"builtInCategory": "OST_Levels",
-			"speckle_type": "Objects.BuiltElements.Level:Objects.BuiltElements.Revit.RevitLevel",
-			"units": "m",
-			"index": null,
-			"name": null,
-			"elevation": null,
-			"createView": true,
-			"referenceOnly": false
-		},
 		"floor": {
 			"category": "Floors",
 			"builtInCategory": "OST_Floors",
@@ -36,6 +25,41 @@
 					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 					"applicationId": null,
 					"applicationInternalName": "FLOOR_HEIGHTABOVELEVEL_PARAM",
+					"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": "m",
+					"value": 0
+				}
+			}
+		},
+		"level": {
+			"category": "Levels",
+			"builtInCategory": "OST_Levels",
+			"speckle_type": "Objects.BuiltElements.Level:Objects.BuiltElements.Revit.RevitLevel",
+			"units": "m",
+			"index": null,
+			"name": null,
+			"elevation": null,
+			"createView": true,
+			"referenceOnly": false
+		},
+		"roof": {
+			"category": "Roofs",
+			"builtInCategory": "OST_Roofs",
+			"speckle_type": "Objects.BuiltElements.Roof:Objects.BuiltElements.Revit.RevitRoof.RevitRoof:Objects.BuiltElements.Revit.RevitRoof.RevitFootprintRoof",
+			"familiy": "Basic Roof",
+			"type": null,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"ROOF_LEVEL_OFFSET_PARAM": {
+					"name": "Base Offset From Level",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOF_LEVEL_OFFSET_PARAM",
 					"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
 					"applicationUnitType": null,
 					"isReadOnly": false,

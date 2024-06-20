@@ -65,8 +65,9 @@ class TranslatorArchicad2Revit(Translator):
 	def get_prop_ids(self):
 
 		propIds = {
-			'General_TopLinkStory': 			self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
-			'General_TopElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
+			'General_TopLinkStory': 				self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
+			'General_BottomElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_BottomElevationToHomeStory'),
+			'General_TopElevationToHomeStory': 		self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
 		}
 
 		return propIds
@@ -100,9 +101,9 @@ class TranslatorArchicad2Revit(Translator):
 		top_level = self.get_top_level(obj, selection, parameters)
 		if top_level == None:
 			top_level = column['level']
-			column['topOffset'] = column['height']
+			column['topOffset'] = column['bottomOffset'] + column['height']
 
-		inputs = {
+		overrides = {
 			'type': 'column',
 			'topLevel': top_level,
 			'rotation': column['slantDirectionAngle'],
@@ -110,11 +111,31 @@ class TranslatorArchicad2Revit(Translator):
 			'topOffset': column['topOffset'],
 		}
 
-		schema = self.schema['column']
-		for key, value in schema.items():
-			column[key] = inputs[key] if key in inputs else value
+		column = self.upd_schema(column, self.schema['column'], overrides)
 
 		return bos.recompose_base(column)
+
+	def map_roof(self, obj, selection, parameters=None):
+		"""
+		Remap roof schema.
+		"""
+		bos = BaseObjectSerializer()
+		roof = bos.traverse_base(obj)[1]
+
+		btm_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_BottomElevationToHomeStory']])
+
+		overrides = {
+			'type': 'roof',
+			'parameters': {
+				'ROOF_LEVEL_OFFSET_PARAM': {
+					'value': btm_elevation_home[0].propertyValues[0].propertyValue.value
+				}
+			}
+		}
+
+		roof = self.upd_schema(roof, self.schema['roof'], overrides)
+
+		return bos.recompose_base(roof)
 
 	def map_slab(self, obj, selection, parameters=None):
 		"""
@@ -125,7 +146,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		top_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
 
-		inputs = {
+		overrides = {
 			'type': 'slab',
 			'TopElevationToHomeStory': top_elevation_home[0].propertyValues[0].propertyValue.value,
 			'parameters': {
@@ -135,7 +156,7 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
-		floor = self.upd_schema(floor, self.schema['floor'], inputs)
+		floor = self.upd_schema(floor, self.schema['floor'], overrides)
 
 		return bos.recompose_base(floor)
 
