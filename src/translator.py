@@ -56,7 +56,8 @@ class TranslatorArchicad2Revit(Translator):
 	    		obj[key] = parameters[key] if key in parameters else value
 	    	else:
 	    		if not key in obj:
-	    			obj[key] = value
+	    			dummy = {} if isinstance(value, dict) else None
+	    			obj[key] = dummy
 	    		self.upd_schema(obj[key], value, parameters[key])
 
 	    return obj

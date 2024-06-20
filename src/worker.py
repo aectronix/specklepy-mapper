@@ -62,4 +62,4 @@ class Worker():
 					elements[i] = obj_remapped
 
 
-		self.speckle.publish(commit, 'exp 2')
+		self.speckle.publish(commit, 'exp 2a')
