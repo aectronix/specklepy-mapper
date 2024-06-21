@@ -40,10 +40,20 @@ class Worker():
 		a2r.map_levels(commit)
 
 		# elements
-		selection = self.archicad.commands.GetSelectedElements()
-		print (len(selection))
-		selection_types = self.archicad.commands.GetTypesOfElements(selection)
-		selection_types = sorted(selection_types, key=lambda x: x.typeOfElement.elementType)
+		selection = self.archicad.commands.GetSelectedElements()	
+		selection_typed = self.archicad.commands.GetTypesOfElements(selection)
+		print (len(selection_typed))
+
+		selection_types = {}
+		for s in selection_typed:
+			element_type = str(s.typeOfElement.elementType).lower()
+			element_guid = str(s.typeOfElement.elementId.guid)
+			if not element_type in selection_types:
+				selection_types[element_type] = {}
+			selection_types[element_type][element_guid] = s
+
+		# for st in selection_types:
+		# 	print (selection_types[st])
 
 		parameters = {
 			'column': {
@@ -51,19 +61,18 @@ class Worker():
 			}
 		}
 
-		# go through selection, deal with each type of elements
-		for selected in selection_types:
-			element_guid = str(selected.typeOfElement.elementId.guid)
-			element_type = str(selected.typeOfElement.elementType).lower()
-			elements = types[element_type]['elements']
+		for t in selection_types:
+			objects = types[t]['elements']
+			mapper = getattr(a2r, 'map_' + t)
+			for i in range(0, len(objects)):
+				guid = objects[i]['applicationId'].lower()
+				if guid in selection_types[t]:
+					
+					subselection = {}
+					if objects[i]['elements']:
+						for e in objects[i]['elements']:
+							subselection[e['applicationId'].lower()] = selection_types[e['elementType'].lower()][e['applicationId'].lower()]
 
-			for i in range(0, len(elements)):
-				if elements[i]['applicationId'] and element_guid.lower() == elements[i]['applicationId'].lower():
+					objects[i] = mapper(objects[i], selection_types[t][guid], subselection)
 
-					mapper = getattr(a2r, 'map_' + element_type)
-					obj_remapped = mapper(elements[i], selected, parameters[element_type] if element_type in parameters else None)
-
-					elements[i] = obj_remapped
-
-
-		self.speckle.publish(commit, 'doors exp 1')
+		self.speckle.publish(commit, 'doors exp 2')

@@ -101,7 +101,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		return None
 
-	def map_column(self, obj, selection, parameters=None):
+	def map_column(self, obj, selection, *args):
 		"""
 		Remap column schema.
 		"""
@@ -126,7 +126,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(column)
 
-	def map_door(self, obj, parameters=None):
+	def map_door(self, obj, *args):
 		"""
 		Remap door schema.
 		"""
@@ -159,7 +159,7 @@ class TranslatorArchicad2Revit(Translator):
 		# return bos.recompose_base(door)
 		return door
 
-	def map_roof(self, obj, selection, parameters=None):
+	def map_roof(self, obj, selection, *args):
 		"""
 		Remap roof schema.
 		"""
@@ -181,7 +181,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(roof)
 
-	def map_slab(self, obj, selection, parameters=None):
+	def map_slab(self, obj, selection, *args):
 		"""
 		Remap slab schema.
 		"""
@@ -204,7 +204,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(floor)
 
-	def map_wall(self, obj, selection, parameters=None):
+	def map_wall(self, obj, selection, *args):
 		"""
 		Remap slab schema.
 		"""
@@ -232,7 +232,6 @@ class TranslatorArchicad2Revit(Translator):
 
 		flip = -1 if wall['flipped'] == True else 1
 		direction = self.get_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
-		print (direction)
 
 		off_x = (out - fix) * direction['y'] * flip * -1
 		off_y = (out - fix) * direction['x'] * flip
