@@ -13,4 +13,4 @@ worker = Worker()
 worker.wrap('archicad')
 worker.translate()
 
-print("\n%s s" % (time.time() - ts))
+print(f'\n{round(time.time() - ts, 2)} sec')

@@ -52,9 +52,6 @@ class Worker():
 				selection_types[element_type] = {}
 			selection_types[element_type][element_guid] = s
 
-		# for st in selection_types:
-		# 	print (selection_types[st])
-
 		parameters = {
 			'column': {
 				'levels': commit['@levels']
@@ -73,6 +70,10 @@ class Worker():
 						for e in objects[i]['elements']:
 							subselection[e['applicationId'].lower()] = selection_types[e['elementType'].lower()][e['applicationId'].lower()]
 
-					objects[i] = mapper(objects[i], selection_types[t][guid], subselection)
+					objects[i] = mapper(
+						objects[i],											# speckle object
+						selection_types[t][guid],							# selectec ac element
+						subselection,										# selected sub element (wido, opening etc)
+						parameters[t] if t in parameters else None)			# additional parameters
 
-		self.speckle.publish(commit, 'doors exp 2')
+		self.speckle.publish(commit, 'doors exp 2d')

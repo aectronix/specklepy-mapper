@@ -126,37 +126,33 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(column)
 
-	def map_door(self, obj, *args):
+	def map_door(self, obj, selection=None, parameters=None):
 		"""
 		Remap door schema.
 		"""
-		# bos = BaseObjectSerializer()
-		# door = bos.traverse_base(obj)[1]
-
 		door = obj
 
 		overrides = {
 			'type': 'door',
 			'definition': {
 				'type': 'door'
+			},
+			'transform': {
+				'units': 'm',
+				'speckle_type': 'Objects.Other.Transform',
+				'matrix': [
+					# displace by axes
+					1, 0, 0, 	parameters['sx'] + door['objLoc'] * parameters['dx'],
+					0, 1, 0, 	parameters['sy'] + door['objLoc'] * parameters['dy'],
+					0, 0, 1,	parameters['sz'] + door['lower'],
+					# homogeneous 
+					0, 0, 0,	1
+				]
 			}
 		}
 
 		door = self.upd_schema(door, self.schema['door'], overrides)
 
-		# door['transform'] = {
-		# 	'units': 'm',
-		# 	'speckle_type': 'Objects.Other.Transform',
-		# 	'matrix': [
-		# 		1, 0, 0, 	0 + 1,
-		# 		0, 1, 0, 	0 + 1,
-		# 		0, 0, 1,	0 + 1,
-
-		# 		0, 0, 0,	1
-		# 	]
-		# }
-
-		# return bos.recompose_base(door)
 		return door
 
 	def map_roof(self, obj, selection, *args):
@@ -204,13 +200,12 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(floor)
 
-	def map_wall(self, obj, selection, *args):
+	def map_wall(self, obj, selection, subselection, *args):
 		"""
 		Remap slab schema.
 		"""
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(obj)[1]
-		# print (str(wall['referenceLineStartIndex']) + ' -> ' + str(wall['referenceLineEndIndex']))
 
 		ref_cases = {
 			'Center': 0,		# Wall Centerline
@@ -250,24 +245,17 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		if wall['elements'] and wall['hasDoor'] == True:
-			for d in range (0, len(wall['elements'])):
-				door_obj = self.map_door(wall['elements'][d])
 
-				door_obj['transform'] = {
-					'units': 'm',
-					'speckle_type': 'Objects.Other.Transform',
-					'matrix': [
-						# displace by axes
-						1, 0, 0, 	sx + door_obj['objLoc'] * direction['x'],
-						0, 1, 0, 	sy + door_obj['objLoc'] * direction['y'],
-						0, 0, 1,	sz + door_obj['lower'],
-						# homogeneous 
-						0, 0, 0,	1
-					]
-				}
+			for e in range (0, len(wall['elements'])):
+				element = wall['elements'][e]
+				if element['elementType'] == 'Door': #and element['applicationId'].lower() in subselection:
 
-				wall['elements'][d] = None
-				wall['elements'][d] = door_obj
+					door = self.map_door(
+						wall['elements'][e],
+						subselection[element['applicationId'].lower()],
+						{'sx': sx, 'sy': sy, 'sz': sz, 'dx': direction['x'], 'dy': direction['y']})
+
+					wall['elements'][e] = door
 
 		wall = self.upd_schema(wall, self.schema['wall'], overrides)
 
@@ -301,9 +289,4 @@ class TranslatorArchicad2Revit(Translator):
 		stories = story_info['stories']
 		for story in stories[::-1]:
 			level = new_level(self.schema['level'], story['index'], story['uName'], story['level'])
-			# obj['@levels'].append(level)
 			obj['@levels'][story['index']] = level
-
-
-			# todo: according to level idx
-			# todo: deal with unconnected
