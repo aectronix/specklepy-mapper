@@ -25,7 +25,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', '486fa0fe2a')
+		commit = self.speckle.retrieve('aeb487f0e6', '2050305a3e')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -50,9 +50,8 @@ class Worker():
 			selection_types[element_type][element_guid] = s
 
 		parameters = {
-			'column': {
-				'levels': commit['@levels']
-			}
+			'column': {'levels': commit['@levels']},
+			'wall': {'levels': commit['@levels']}
 		}
 
 		for t in selection_types:
@@ -61,9 +60,9 @@ class Worker():
 			for i in range(0, len(objects)):
 				guid = objects[i]['applicationId'].lower()
 				if guid in selection_types[t]:
-					
+					# print (hasattr(objects[i], 'elements'))
 					subselection = {}
-					if objects[i]['elements']:
+					if hasattr(objects[i], 'elements') and objects[i]['elements']:
 						for e in objects[i]['elements']:
 							subselection[e['applicationId'].lower()] = selection_types[e['elementType'].lower()][e['applicationId'].lower()]
 
@@ -73,4 +72,4 @@ class Worker():
 						subselection,										# selected sub element (wido, opening etc)
 						parameters[t] if t in parameters else None)			# additional parameters
 
-		self.speckle.publish(commit, 'windows exp 1b')
+		self.speckle.publish(commit, 'test exp 0b1')

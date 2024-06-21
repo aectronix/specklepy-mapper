@@ -101,7 +101,6 @@
 			"family": "Basic Wall",
 			"type": null,
 			"topLevel": null,
-			"baseOffset": null,
 			"topOffset": null,
 			"parameters": {
 				"speckle_type": "Base",

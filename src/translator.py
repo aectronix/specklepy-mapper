@@ -101,7 +101,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		return None
 
-	def map_column(self, obj, selection, *args):
+	def map_column(self, obj, selection, subselection=None, parameters=None):
 		"""
 		Remap column schema.
 		"""
@@ -204,12 +204,18 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(floor)
 
-	def map_wall(self, obj, selection, subselection, *args):
+	def map_wall(self, obj, selection, subselection=None, parameters=None):
 		"""
 		Remap slab schema.
 		"""
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(obj)[1]
+
+		# need to retrieve top link info
+		top_level = self.get_top_level(obj, selection, parameters)
+		if top_level == None:
+			top_level = wall['level']
+			wall['topOffset'] = wall['baseOffset'] + wall['height']
 
 		ref_cases = {
 			'Center': 0,		# Wall Centerline
@@ -237,6 +243,8 @@ class TranslatorArchicad2Revit(Translator):
 
 		overrides = {
 			'type': wall['structure'] + ' Wall',
+			'topLevel': top_level,
+			'topOffset': wall['topOffset'],
 			'parameters': {
 				'WALL_KEY_REF_PARAM': {
 					'value': ref_cases[wall['referenceLineLocation']]
@@ -248,6 +256,7 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
+		# update child elements (doors, windows, etc)
 		if wall['elements'] and (wall['hasDoor'] == True or wall['hasWindow'] == True):
 			for e in range (0, len(wall['elements'])):
 				element = wall['elements'][e]
