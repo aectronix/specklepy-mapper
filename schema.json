@@ -130,6 +130,30 @@
 					"y": null
 				}
 			}
+		},
+		"window": {
+			"category": "Windows",
+			"builtInCategory": "OST_Windows",
+			"speckle_type": "Objects.Other.Revit.RevitInstance",
+			"type": "window",
+			"definition": {
+				"category": "Windows",
+				"builtInCategory": "OST_Windows",
+				"speckle_type": "Objects.BuiltElements.Revit.RevitElementType:Objects.BuiltElements.Revit.RevitSymbolElementType",
+				"type": "window",
+				"placementType": "OneLevelBasedHosted",
+				"units": "m"
+			},
+			"transform": {
+				"speckle_type": "Objects.Other.Transform",
+				"units": "m",
+				"matrix": [
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0
+				]
+			}
 		}
 	}
 }

@@ -126,34 +126,40 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(column)
 
-	def map_door(self, obj, selection=None, parameters=None):
+	def map_wido(self, obj, selection=None, parameters=None):
 		"""
-		Remap door schema.
+		Remap door and window schema.
 		"""
-		door = obj
+		wido = obj
 
 		overrides = {
-			'type': 'door',
+			'type': obj['elementType'],
 			'definition': {
-				'type': 'door'
+				'type': obj['elementType'],
 			},
 			'transform': {
 				'units': 'm',
 				'speckle_type': 'Objects.Other.Transform',
 				'matrix': [
 					# displace by axes
-					1, 0, 0, 	parameters['sx'] + door['objLoc'] * parameters['dx'],
-					0, 1, 0, 	parameters['sy'] + door['objLoc'] * parameters['dy'],
-					0, 0, 1,	parameters['sz'] + door['lower'],
+					1, 0, 0, 	parameters['sx'] + wido['objLoc'] * parameters['dx'],
+					0, 1, 0, 	parameters['sy'] + wido['objLoc'] * parameters['dy'],
+					0, 0, 1,	parameters['sz'] + wido['lower'],
 					# homogeneous 
 					0, 0, 0,	1
 				]
 			}
 		}
 
-		door = self.upd_schema(door, self.schema['door'], overrides)
+		wido = self.upd_schema(wido, self.schema[obj['elementType'].lower()], overrides)
 
-		return door
+		return wido
+
+	def map_door(self, obj, selection=None, parameters=None):
+		return self.map_wido(obj, selection, parameters)
+
+	def map_window(self, obj, selection=None, parameters=None):
+		return self.map_wido(obj, selection, parameters)
 
 	def map_roof(self, obj, selection, *args):
 		"""
@@ -244,18 +250,18 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
-		if wall['elements'] and wall['hasDoor'] == True:
-
+		if wall['elements'] and (wall['hasDoor'] == True or wall['hasWindow'] == True):
 			for e in range (0, len(wall['elements'])):
 				element = wall['elements'][e]
-				if element['elementType'] == 'Door': #and element['applicationId'].lower() in subselection:
 
-					door = self.map_door(
+				if element['elementType'] == 'Door' or element['elementType'] == 'Window': #and element['applicationId'].lower() in subselection:
+
+					wido = self.map_wido(
 						wall['elements'][e],
 						subselection[element['applicationId'].lower()],
 						{'sx': sx, 'sy': sy, 'sz': sz, 'dx': direction['x'], 'dy': direction['y']})
 
-					wall['elements'][e] = door
+					wall['elements'][e] = wido
 
 		wall = self.upd_schema(wall, self.schema['wall'], overrides)
 

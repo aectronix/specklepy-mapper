@@ -25,14 +25,10 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', '2c83bdc4b2')
+		commit = self.speckle.retrieve('aeb487f0e6', '486fa0fe2a')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
-		types = {
-			'door': {
-				'elements': []
-			}
-		}
+		types = {}
 		for e in commit['elements']:
 			types[e.name.lower()] = e
 
@@ -44,6 +40,7 @@ class Worker():
 		selection_typed = self.archicad.commands.GetTypesOfElements(selection)
 		print (len(selection_typed))
 
+		# recompose received selection
 		selection_types = {}
 		for s in selection_typed:
 			element_type = str(s.typeOfElement.elementType).lower()
@@ -59,7 +56,7 @@ class Worker():
 		}
 
 		for t in selection_types:
-			objects = types[t]['elements']
+			objects = types[t]['elements'] if t in types else []
 			mapper = getattr(a2r, 'map_' + t)
 			for i in range(0, len(objects)):
 				guid = objects[i]['applicationId'].lower()
@@ -76,4 +73,4 @@ class Worker():
 						subselection,										# selected sub element (wido, opening etc)
 						parameters[t] if t in parameters else None)			# additional parameters
 
-		self.speckle.publish(commit, 'doors exp 2d')
+		self.speckle.publish(commit, 'windows exp 1a')
