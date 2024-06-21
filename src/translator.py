@@ -83,16 +83,7 @@ class TranslatorArchicad2Revit(Translator):
 		vx = dx / vm
 		vy = dy / vm
 
-		# print('(' + str(line['start']['x']) + ':' + str(line['start']['y']) +  ') >> (' + str(line['end']['x']) + ':' + str(line['end']['y']) + ')')
-		# print(f'v={vx}:{vy}')
-
 		return {'x': vx, 'y': vy}
-
-	# def get_normale(self, vector):
-
-	# 	print ()
-
-	#def get_prop_values(self):	todo
 
 	def get_top_level(self, obj, selection, parameters=None):
 		"""
@@ -134,6 +125,39 @@ class TranslatorArchicad2Revit(Translator):
 		column = self.upd_schema(column, self.schema['column'], overrides)
 
 		return bos.recompose_base(column)
+
+	def map_door(self, obj, parameters=None):
+		"""
+		Remap door schema.
+		"""
+		# bos = BaseObjectSerializer()
+		# door = bos.traverse_base(obj)[1]
+
+		door = obj
+
+		overrides = {
+			'type': 'door',
+			'definition': {
+				'type': 'door'
+			}
+		}
+
+		door = self.upd_schema(door, self.schema['door'], overrides)
+
+		# door['transform'] = {
+		# 	'units': 'm',
+		# 	'speckle_type': 'Objects.Other.Transform',
+		# 	'matrix': [
+		# 		1, 0, 0, 	0 + 1,
+		# 		0, 1, 0, 	0 + 1,
+		# 		0, 0, 1,	0 + 1,
+
+		# 		0, 0, 0,	1
+		# 	]
+		# }
+
+		# return bos.recompose_base(door)
+		return door
 
 	def map_roof(self, obj, selection, parameters=None):
 		"""
@@ -199,6 +223,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		sx = wall['baseLine']['start']['x']
 		sy = wall['baseLine']['start']['y']
+		sz = wall['baseLine']['start']['z']
 		ex = wall['baseLine']['end']['x']
 		ey = wall['baseLine']['end']['y']
 
@@ -207,6 +232,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		flip = -1 if wall['flipped'] == True else 1
 		direction = self.get_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
+		print (direction)
 
 		off_x = (out - fix) * direction['y'] * flip * -1
 		off_y = (out - fix) * direction['x'] * flip
@@ -223,6 +249,26 @@ class TranslatorArchicad2Revit(Translator):
 				'end': {'x': ex + off_x, 'y': ey  + off_y}
 			}
 		}
+
+		if wall['elements'] and wall['hasDoor'] == True:
+			for d in range (0, len(wall['elements'])):
+				door_obj = self.map_door(wall['elements'][d])
+
+				door_obj['transform'] = {
+					'units': 'm',
+					'speckle_type': 'Objects.Other.Transform',
+					'matrix': [
+						# displace by axes
+						1, 0, 0, 	sx + door_obj['objLoc'] * direction['x'],
+						0, 1, 0, 	sy + door_obj['objLoc'] * direction['y'],
+						0, 0, 1,	sz + door_obj['lower'],
+						# homogeneous 
+						0, 0, 0,	1
+					]
+				}
+
+				wall['elements'][d] = None
+				wall['elements'][d] = door_obj
 
 		wall = self.upd_schema(wall, self.schema['wall'], overrides)
 

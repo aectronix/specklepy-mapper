@@ -45,6 +45,6 @@ class SpeckleWrapper():
 		commit = self.client.commit.create(
 		    'aeb487f0e6',
 		    obj_updated,
-		    branch_name = 'wall',
+		    branch_name = 'wido',
 		    message = message
 		)

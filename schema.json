@@ -10,6 +10,20 @@
 			"topOffset": null,
 			"rotation": null
 		},
+		"door": {
+			"category": "Doors",
+			"builtInCategory": "OST_Doors",
+			"speckle_type": "Objects.Other.Revit.RevitInstance",
+			"type": "door",
+			"definition": {
+				"category": "Doors",
+				"builtInCategory": "OST_Doors",
+				"speckle_type": "Objects.BuiltElements.Revit.RevitElementType:Objects.BuiltElements.Revit.RevitSymbolElementType",
+				"type": "door",
+				"placementType": "OneLevelBasedHosted",
+				"units": "m"
+			}
+		},
 		"floor": {
 			"category": "Floors",
 			"builtInCategory": "OST_Floors",
