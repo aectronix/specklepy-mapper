@@ -138,8 +138,6 @@ class TranslatorArchicad2Revit(Translator):
 				'type': obj['elementType'],
 			},
 			'transform': {
-				'units': 'm',
-				'speckle_type': 'Objects.Other.Transform',
 				'matrix': [
 					# displace by axes
 					1, 0, 0, 	parameters['sx'] + wido['objLoc'] * parameters['dx'],
