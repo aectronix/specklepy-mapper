@@ -1,7 +1,56 @@
 {
 	"revit": {
+		"beam": {
+			"category": "Structural Framing",
+			"builtInCategory": "OST_StructuralFraming",
+			"speckle_type": "Objects.BuiltElements.Column:Objects.BuiltElements.Revit.RevitBeam",
+			"type": null,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"Y_JUSTIFICATION": {
+					"name": "y Justification",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "Y_JUSTIFICATION",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": 0
+				},
+				"Z_JUSTIFICATION": {
+					"name": "y Justification",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "Z_JUSTIFICATION",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": 0
+				},
+				"Y_OFFSET_VALUE": {
+					"name": "y Justification",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "Y_OFFSET_VALUE",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": "m",
+					"value": 0
+				}
+			}
+		},
 		"column": {
-			"category": "Structural Columns",
+			"category": "Structural Column",
 			"builtInCategory": "OST_StructuralColumns",
 			"speckle_type": "Objects.BuiltElements.Column:Objects.BuiltElements.Revit.RevitColumn",
 			"type": null,

@@ -101,6 +101,44 @@ class TranslatorArchicad2Revit(Translator):
 
 		return None
 
+	def map_beam(self, obj, selection, *args):
+		"""
+		Remap beam schema.
+		"""
+		bos = BaseObjectSerializer()
+		beam = bos.traverse_base(obj)[1]
+
+		justification = {
+			0: {'jy': 0, 'jz': 0},	# left, top
+			1: {'jy': 1, 'jz': 0},	# center, top
+			2: {'jy': 3, 'jz': 0},	# right, top
+			3: {'jy': 0, 'jz': 1},	# left, center
+			4: {'jy': 1, 'jz': 1},	# center, center
+			5: {'jy': 3, 'jz': 1},	# right, center
+			6: {'jy': 0, 'jz': 3},	# left, bottom
+			7: {'jy': 1, 'jz': 3},	# center, bottom
+			8: {'jy': 3, 'jz': 3},	# right, bottom
+		}
+
+		overrides = {
+			'type': 'beam',
+			'parameters': {
+				'Y_JUSTIFICATION': {
+					'value': justification[beam['anchorPoint']]['jy']
+				},
+				'Z_JUSTIFICATION': {
+					'value': justification[beam['anchorPoint']]['jz']
+				},
+				'Y_OFFSET_VALUE': {
+					'value': beam['offset']
+				}
+			}
+		}
+
+		beam = self.upd_schema(beam, self.schema['beam'], overrides)
+
+		return bos.recompose_base(beam)
+
 	def map_column(self, obj, selection, subselection=None, parameters=None):
 		"""
 		Remap column schema.
