@@ -69,6 +69,7 @@ class TranslatorArchicad2Revit(Translator):
 			'General_TopLinkStory': 				self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
 			'General_BottomElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_BottomElevationToHomeStory'),
 			'General_TopElevationToHomeStory': 		self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
+			'Geometry_OpeningTotalThickness': 		self.wrapper.utilities.GetBuiltInPropertyId('Geometry_OpeningTotalThickness'),
 		}
 
 		return propIds
@@ -196,6 +197,94 @@ class TranslatorArchicad2Revit(Translator):
 
 	def map_window(self, obj, selection=None, parameters=None):
 		return self.map_wido(obj, selection, parameters)
+
+	def map_opening(self, obj, selection, *args):
+		"""
+		Remap roof schema.
+		"""
+
+		def newShaft(appId):
+
+			bos = BaseObjectSerializer()
+			shaft = bos.traverse_base(Base())[1]
+
+			# shaft['applicationId'] = appId.guid
+			shaft['type'] = 'Opening Cut'
+			shaft['bottomLevel'] = {}
+			shaft['units'] = 'm'
+			shaft['category'] = 'Shaft Openings'
+			shaft['speckle_type'] = 'Objects.BuiltElements.Opening:Objects.BuiltElements.Revit.RevitOpening:Objects.BuiltElements.Revit.RevitShaft'
+			shaft['builtInCategory'] = 'OST_ShaftOpening'
+			shaft['outline'] = {
+				'units': 'm',
+				'closed': True,
+				'speckle_type': 'Objects.Geometry.Polycurve',
+				'segments': []
+			}
+
+			return bos.recompose_base(shaft)
+
+		def newSegment(start_x, start_y, start_z, end_x, end_y, end_z):
+
+			bos = BaseObjectSerializer()
+			segment = bos.traverse_base(Base())[1]
+			segment['start'] = {
+				'x': start_x,
+				'y': start_y,
+				'z': start_z,
+				'units': 'm',
+				'speckle_type': 'Objects.Geometry.Point'
+			}
+			segment['end'] = {
+				'x': end_x,
+				'y': end_y,
+				'z': end_z,
+				'units': 'm',
+				'speckle_type': 'Objects.Geometry.Point'
+			}
+			segment['units'] = 'm'
+			segment['speckle_type'] = 'Objects.Geometry.Line'
+
+			return bos.recompose_base(segment)
+
+		bos = BaseObjectSerializer()
+		opening = bos.traverse_base(obj)[1]
+
+		bbox = self.wrapper.commands.Get2DBoundingBoxes([selection.typeOfElement.elementId])[0].boundingBox2D
+
+		genHeight = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId,], [self.propIds['Geometry_OpeningTotalThickness']])
+		height = genHeight[0].propertyValues[0].propertyValue.value
+		bottomElv = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId,], [self.propIds['General_BottomElevationToHomeStory']])
+		btmElv = bottomElv[0].propertyValues[0].propertyValue.value
+
+		shaft = newShaft(selection.typeOfElement.elementId)
+		shaft['bottomLevel'] = opening['level']
+		shaft['height'] = height
+
+		shaft['outline']['segments'].append(newSegment(bbox.xMin, bbox.yMin, btmElv,	bbox.xMin, bbox.yMax, btmElv))
+		shaft['outline']['segments'].append(newSegment(bbox.xMin, bbox.yMax, btmElv,	bbox.xMax, bbox.yMax, btmElv))
+		shaft['outline']['segments'].append(newSegment(bbox.xMax, bbox.yMax, btmElv,	bbox.xMax, bbox.yMin, btmElv))
+		shaft['outline']['segments'].append(newSegment(bbox.xMax, bbox.yMin, btmElv,	bbox.xMin, bbox.yMin, btmElv))
+
+		shaft['parameters'] = {}
+		shaft['parameters']['speckle_type'] = 'Base'
+		shaft['parameters']['applicationId'] = None
+
+		shaft['parameters']['WALL_BASE_OFFSET'] = {
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': 'WALL_BASE_OFFSET',
+			'applicationUnit': None,
+			'applicationUnitType': 'autodesk.unit.unit:meters-1.0.1',
+			'isReadOnly': False,
+			'isShared': False,
+			'isTypeParameter': False,
+			'name': 'Base Offset',
+			'units': 'm',
+			'value': btmElv
+		}
+
+		return shaft
 
 	def map_roof(self, obj, selection, *args):
 		"""

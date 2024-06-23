@@ -25,7 +25,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', '39da760a4e')
+		commit = self.speckle.retrieve('aeb487f0e6', '04532e2a21')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -72,4 +72,4 @@ class Worker():
 						subselection,									# selected sub element (wido, opening etc)
 						parameters[t] if t in parameters else None)		# additional parameters
 
-		self.speckle.publish(commit, 'test beams exp 0')
+		self.speckle.publish(commit, 'test beams exp 1')
