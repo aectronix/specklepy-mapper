@@ -72,4 +72,4 @@ class Worker():
 						subselection,									# selected sub element (wido, opening etc)
 						parameters[t] if t in parameters else None)		# additional parameters
 
-		self.speckle.publish(commit, 'test beams exp 1')
+		self.speckle.publish(commit, 'test beams exp 1g1')

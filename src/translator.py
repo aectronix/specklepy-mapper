@@ -200,29 +200,8 @@ class TranslatorArchicad2Revit(Translator):
 
 	def map_opening(self, obj, selection, *args):
 		"""
-		Remap roof schema.
+		Remap opening schema.
 		"""
-
-		def newShaft(appId):
-
-			bos = BaseObjectSerializer()
-			shaft = bos.traverse_base(Base())[1]
-
-			# shaft['applicationId'] = appId.guid
-			shaft['type'] = 'Opening Cut'
-			shaft['bottomLevel'] = {}
-			shaft['units'] = 'm'
-			shaft['category'] = 'Shaft Openings'
-			shaft['speckle_type'] = 'Objects.BuiltElements.Opening:Objects.BuiltElements.Revit.RevitOpening:Objects.BuiltElements.Revit.RevitShaft'
-			shaft['builtInCategory'] = 'OST_ShaftOpening'
-			shaft['outline'] = {
-				'units': 'm',
-				'closed': True,
-				'speckle_type': 'Objects.Geometry.Polycurve',
-				'segments': []
-			}
-
-			return bos.recompose_base(shaft)
 
 		def newSegment(start_x, start_y, start_z, end_x, end_y, end_z):
 
@@ -245,10 +224,11 @@ class TranslatorArchicad2Revit(Translator):
 			segment['units'] = 'm'
 			segment['speckle_type'] = 'Objects.Geometry.Line'
 
-			return bos.recompose_base(segment)
+			# return bos.recompose_base(segment)
+			return segment
 
-		bos = BaseObjectSerializer()
-		opening = bos.traverse_base(obj)[1]
+		oos = BaseObjectSerializer()
+		opening = oos.traverse_base(obj)[1]
 
 		bbox = self.wrapper.commands.Get2DBoundingBoxes([selection.typeOfElement.elementId])[0].boundingBox2D
 
@@ -257,32 +237,31 @@ class TranslatorArchicad2Revit(Translator):
 		bottomElv = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId,], [self.propIds['General_BottomElevationToHomeStory']])
 		btmElv = bottomElv[0].propertyValues[0].propertyValue.value
 
-		shaft = newShaft(selection.typeOfElement.elementId)
-		shaft['bottomLevel'] = opening['level']
-		shaft['height'] = height
+		bos = BaseObjectSerializer()
+		shaft = bos.traverse_base(Base())[1]
 
+		overrides = {
+			'type': 'Opening Cut',
+			'bottomLevel': opening['level'],
+			'height': height,
+			'parameters': {
+				'WALL_BASE_OFFSET': {
+					'value': btmElv,
+				}
+			},
+			'outline': {
+				'segments': []
+			}
+		}
+
+		shaft = self.upd_schema(shaft, self.schema['shaft'], overrides)
+		shaft = bos.recompose_base(shaft)
+
+		# add polyline segments
 		shaft['outline']['segments'].append(newSegment(bbox.xMin, bbox.yMin, btmElv,	bbox.xMin, bbox.yMax, btmElv))
 		shaft['outline']['segments'].append(newSegment(bbox.xMin, bbox.yMax, btmElv,	bbox.xMax, bbox.yMax, btmElv))
 		shaft['outline']['segments'].append(newSegment(bbox.xMax, bbox.yMax, btmElv,	bbox.xMax, bbox.yMin, btmElv))
 		shaft['outline']['segments'].append(newSegment(bbox.xMax, bbox.yMin, btmElv,	bbox.xMin, bbox.yMin, btmElv))
-
-		shaft['parameters'] = {}
-		shaft['parameters']['speckle_type'] = 'Base'
-		shaft['parameters']['applicationId'] = None
-
-		shaft['parameters']['WALL_BASE_OFFSET'] = {
-			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-			'applicationId': None,
-			'applicationInternalName': 'WALL_BASE_OFFSET',
-			'applicationUnit': None,
-			'applicationUnitType': 'autodesk.unit.unit:meters-1.0.1',
-			'isReadOnly': False,
-			'isShared': False,
-			'isTypeParameter': False,
-			'name': 'Base Offset',
-			'units': 'm',
-			'value': btmElv
-		}
 
 		return shaft
 
