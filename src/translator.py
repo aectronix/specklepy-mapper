@@ -109,6 +109,8 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		beam = bos.traverse_base(obj)[1]
 
+		width = round(beam['segments']['Segment #1']['assemblySegmentData']['nominalWidth']*1000)/1000
+		height = round(beam['segments']['Segment #1']['assemblySegmentData']['nominalHeight']*1000)/1000
 		justification = {
 			0: {'jy': 0, 'jz': 0},	# left, top
 			1: {'jy': 1, 'jz': 0},	# center, top
@@ -122,7 +124,7 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		overrides = {
-			'type': 'beam',
+			'type': 'Beam ' + beam['segments']['Segment #1']['assemblySegmentData']['buildingMaterial'] + ' ' + str(width) + ' x ' + str(height),
 			'parameters': {
 				'Y_JUSTIFICATION': {
 					'value': justification[beam['anchorPoint']]['jy']
@@ -147,14 +149,21 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		column = bos.traverse_base(obj)[1]
 
-		# need to retrieve top link info
+		width = round(column['segments']['Segment #1']['assemblySegmentData']['nominalWidth']*1000)/1000
+		height = round(column['segments']['Segment #1']['assemblySegmentData']['nominalHeight']*1000)/1000
 		top_level = self.get_top_level(obj, selection, parameters)
 		if top_level == None:
 			top_level = column['level']
 			column['topOffset'] = column['bottomOffset'] + column['height']
 
+		typo = "Col"
+		if column['segments']['Segment #1']['assemblySegmentData']['modelElemStructureType'] == 'Complex Profile':
+			typo = column['segments']['Segment #1']['assemblySegmentData']['profileAttrName'] + ' ' + str(height) + 'x' + str(width)
+		else:
+			typo = column['segments']['Segment #1']['assemblySegmentData']['buildingMaterial'] + ' ' + str(height) + 'x' + str(width)
+
 		overrides = {
-			'type': 'column',
+			'type': typo,
 			'topLevel': top_level,
 			'rotation': column['slantDirectionAngle'],
 			'baseOffset': column['bottomOffset'],
@@ -172,9 +181,9 @@ class TranslatorArchicad2Revit(Translator):
 		wido = obj
 
 		overrides = {
-			'type': obj['elementType'],
+			'type': str(obj['libraryPart']) + ' ' + str(obj['width']) + ' x ' + str(obj['height']),
 			'definition': {
-				'type': obj['elementType'],
+				'type': str(obj['libraryPart'])  + ' ' + str(obj['width']) + ' x ' + str(obj['height']),
 			},
 			'transform': {
 				'matrix': [
@@ -198,6 +207,9 @@ class TranslatorArchicad2Revit(Translator):
 	def map_window(self, obj, selection=None, parameters=None):
 		return self.map_wido(obj, selection, parameters)
 
+	def map_object(self, obj, selection, *args):
+		pass
+
 	def map_opening(self, obj, selection, *args):
 		"""
 		Remap opening schema.
@@ -205,8 +217,9 @@ class TranslatorArchicad2Revit(Translator):
 
 		def newSegment(start_x, start_y, start_z, end_x, end_y, end_z):
 
-			bos = BaseObjectSerializer()
-			segment = bos.traverse_base(Base())[1]
+			# bos = BaseObjectSerializer()
+			# segment = bos.traverse_base(Base())[1]
+			segment = {}
 			segment['start'] = {
 				'x': start_x,
 				'y': start_y,
@@ -272,10 +285,11 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		roof = bos.traverse_base(obj)[1]
 
+		structure = str(roof['thickness']) + ' ' + roof['buildingMaterialName'] if roof['buildingMaterialName'] else roof['compositeName']
 		btm_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_BottomElevationToHomeStory']])
 
 		overrides = {
-			'type': 'roof',
+			'type': roof['structure'] + ' ' + structure,
 			'parameters': {
 				'ROOF_LEVEL_OFFSET_PARAM': {
 					'value': btm_elevation_home[0].propertyValues[0].propertyValue.value
@@ -294,10 +308,11 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		floor = bos.traverse_base(obj)[1]
 
+		structure = str(floor['thickness']) + ' ' + floor['buildingMaterialName'] if floor['buildingMaterialName'] else floor['compositeName']
 		top_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
 
 		overrides = {
-			'type': 'slab',
+			'type': floor['structure'] + ' ' + structure,
 			'TopElevationToHomeStory': top_elevation_home[0].propertyValues[0].propertyValue.value,
 			'parameters': {
 				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
@@ -310,6 +325,9 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(floor)
 
+	def map_stair(self, obj, selection, *args):
+		pass
+
 	def map_wall(self, obj, selection, subselection=None, parameters=None):
 		"""
 		Remap slab schema.
@@ -318,6 +336,7 @@ class TranslatorArchicad2Revit(Translator):
 		wall = bos.traverse_base(obj)[1]
 
 		# need to retrieve top link info
+		structure = str(wall['thickness']) + ' ' + wall['buildingMaterialName'] if wall['buildingMaterialName'] else wall['compositeName']
 		top_level = self.get_top_level(obj, selection, parameters)
 		if top_level == None:
 			top_level = wall['level']
@@ -348,7 +367,7 @@ class TranslatorArchicad2Revit(Translator):
 		off_y = (out - fix) * direction['x'] * flip
 
 		overrides = {
-			'type': wall['structure'] + ' Wall',
+			'type': wall['structure'] + ' ' + structure,
 			'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
@@ -373,6 +392,8 @@ class TranslatorArchicad2Revit(Translator):
 						wall['elements'][e],
 						subselection[element['applicationId'].lower()],
 						{'sx': sx, 'sy': sy, 'sz': sz, 'dx': direction['x'], 'dy': direction['y']})
+
+					wido['level'] = wall['level']
 
 					wall['elements'][e] = wido
 

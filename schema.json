@@ -63,12 +63,12 @@
 			"category": "Doors",
 			"builtInCategory": "OST_Doors",
 			"speckle_type": "Objects.Other.Revit.RevitInstance",
-			"type": "door",
+			"type": null,
 			"definition": {
 				"category": "Doors",
 				"builtInCategory": "OST_Doors",
 				"speckle_type": "Objects.BuiltElements.Revit.RevitElementType:Objects.BuiltElements.Revit.RevitSymbolElementType",
-				"type": "door",
+				"type": null,
 				"placementType": "OneLevelBasedHosted",
 				"units": "m"
 			},
@@ -214,12 +214,12 @@
 			"category": "Windows",
 			"builtInCategory": "OST_Windows",
 			"speckle_type": "Objects.Other.Revit.RevitInstance",
-			"type": "window",
+			"type": null,
 			"definition": {
 				"category": "Windows",
 				"builtInCategory": "OST_Windows",
 				"speckle_type": "Objects.BuiltElements.Revit.RevitElementType:Objects.BuiltElements.Revit.RevitSymbolElementType",
-				"type": "window",
+				"type": null,
 				"placementType": "OneLevelBasedHosted",
 				"units": "m"
 			},
