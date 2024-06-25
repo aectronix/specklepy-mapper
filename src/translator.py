@@ -210,6 +210,9 @@ class TranslatorArchicad2Revit(Translator):
 	def map_object(self, obj, selection, *args):
 		pass
 
+	def map_morph(self, obj, selection, *args):
+		pass
+
 	def map_opening(self, obj, selection, *args):
 		"""
 		Remap opening schema.
@@ -367,7 +370,7 @@ class TranslatorArchicad2Revit(Translator):
 		off_y = (out - fix) * direction['x'] * flip
 
 		overrides = {
-			'type': wall['structure'] + ' ' + structure,
+			'type': str(wall['structure']) + ' ' + str(structure),
 			'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
