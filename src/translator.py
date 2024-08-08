@@ -281,10 +281,32 @@ class TranslatorArchicad2Revit(Translator):
 
 		return shaft
 
+	def map_opening_wall(self, obj, *args):
+
+		opening = obj
+		host_height = args[0]
+
+		overrides = {
+			'parameters': {
+				'WALL_TOP_OFFSET': {
+					'value': -1 * (host_height - opening['anchorAltitude']),
+				},
+				'WALL_BASE_OFFSET': {
+					'value': opening['anchorAltitude'] - opening['height'],
+				}
+			},
+		}
+
+		shaft = self.upd_schema(opening, self.schema['shaft_wall'], overrides)
+		return shaft
+
+	def	map_railing(self, obj, selection, *args):
+		pass
+
 	def map_roof(self, obj, selection, *args):
 		"""
-		Remap roof schema.
-		"""
+		Remap roof schema
+.sp		"""
 		bos = BaseObjectSerializer()
 		roof = bos.traverse_base(obj)[1]
 
@@ -384,21 +406,28 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
-		# update child elements (doors, windows, etc)
-		if wall['elements'] and (wall['hasDoor'] == True or wall['hasWindow'] == True):
+		# update child elements (doors, windows, openings etc)
+		if 'elements' in wall and wall['elements']:
 			for e in range (0, len(wall['elements'])):
 				element = wall['elements'][e]
-
+				print (element['applicationId'].lower()+'*')
 				if element['elementType'] == 'Door' or element['elementType'] == 'Window': #and element['applicationId'].lower() in subselection:
-
 					wido = self.map_wido(
 						wall['elements'][e],
 						subselection[element['applicationId'].lower()],
-						{'sx': sx, 'sy': sy, 'sz': sz, 'dx': direction['x'], 'dy': direction['y']})
-
+						{'sx': sx, 'sy': sy, 'sz': sz, 'dx': direction['x'], 'dy': direction['y']}
+					)
 					wido['level'] = wall['level']
 
 					wall['elements'][e] = wido
+
+				elif element['elementType'] == 'Opening':
+					opening = self.map_opening_wall(
+						wall['elements'][e],
+						wall['height']
+					)
+					wall['elements'][e] = opening
+
 
 		wall = self.upd_schema(wall, self.schema['wall'], overrides)
 

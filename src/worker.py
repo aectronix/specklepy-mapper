@@ -14,18 +14,19 @@ class Worker():
 
 		self.wrap('speckle')
 
-	def wrap(self, service):
+	def wrap(self, service, *args, **kwargs):
 
 		try:
-			wrapper = globals()[service.capitalize() + 'Wrapper']()
-			if wrapper:
-				setattr(self, service, wrapper)
+			wrapper = globals()[service.capitalize() + 'Wrapper']
+			wrapper_obj = wrapper(*args, **kwargs)
+			if wrapper_obj:
+				setattr(self, service, wrapper_obj)
 		except Exception as e:
 			raise e
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', '67c10a1c9a')
+		commit = self.speckle.retrieve('aeb487f0e6', '76048d0326')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -61,7 +62,6 @@ class Worker():
 				guid = objects[i]['applicationId'].lower()
 				if guid in selection_types[t]:
 					print (guid)
-					# print (hasattr(objects[i], 'elements'))
 					subselection = {}
 					if hasattr(objects[i], 'elements') and objects[i]['elements']:
 						for e in objects[i]['elements']:
@@ -73,4 +73,4 @@ class Worker():
 						subselection,									# selected sub element (wido, opening etc)
 						parameters[t] if t in parameters else None)		# additional parameters
 
-		self.speckle.publish(commit, 'prj exp 5')
+		self.speckle.publish(commit, 'wall open exp 1c')
