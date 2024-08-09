@@ -69,7 +69,6 @@ class TranslatorArchicad2Revit(Translator):
 			'General_TopLinkStory': 				self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
 			'General_BottomElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_BottomElevationToHomeStory'),
 			'General_TopElevationToHomeStory': 		self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
-			'Geometry_OpeningTotalThickness': 		self.wrapper.utilities.GetBuiltInPropertyId('Geometry_OpeningTotalThickness'),
 		}
 
 		return propIds
@@ -101,6 +100,56 @@ class TranslatorArchicad2Revit(Translator):
 				return BaseObjectSerializer().traverse_base(parameters['levels'][top_link_index])[1]
 
 		return None
+
+	@staticmethod
+	def make_segment(start_x, start_y, start_z, end_x, end_y, end_z):
+		segment = {}
+		segment['start'] = {
+			'x': start_x,
+			'y': start_y,
+			'z': start_z,
+			'units': 'm',
+			'speckle_type': 'Objects.Geometry.Point'
+		}
+		segment['end'] = {
+			'x': end_x,
+			'y': end_y,
+			'z': end_z,
+			'units': 'm',
+			'speckle_type': 'Objects.Geometry.Point'
+		}
+		segment['units'] = 'm'
+		segment['speckle_type'] = 'Objects.Geometry.Line'
+		return segment
+
+	def map_levels(self, obj):
+		"""
+		Remap level structure.
+		"""
+		obj['@levels'] = {}
+
+		def new_level(schema, index, name, elevation):
+
+			bos = BaseObjectSerializer()
+			level = bos.traverse_base(Base())[1]
+
+			for key, value in schema.items():
+				level[key] = value
+
+			if not name:
+				name = str(index) + ' level on ' + str(elevation * 1000)
+
+			level['index'] = index
+			level['name'] = name
+			level['elevation'] = elevation
+
+			return bos.recompose_base(level)
+
+		story_info = self.wrapper.tapir.run('GetStoryInfo', {})
+		stories = story_info['stories']
+		for story in stories[::-1]:
+			level = new_level(self.schema['level'], story['index'], story['uName'], story['level'])
+			obj['@levels'][story['index']] = level
 
 	def map_beam(self, obj, selection, *args):
 		"""
@@ -217,87 +266,59 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		Remap opening schema.
 		"""
+		pass
 
-		def newSegment(start_x, start_y, start_z, end_x, end_y, end_z):
-
-			# bos = BaseObjectSerializer()
-			# segment = bos.traverse_base(Base())[1]
-			segment = {}
-			segment['start'] = {
-				'x': start_x,
-				'y': start_y,
-				'z': start_z,
-				'units': 'm',
-				'speckle_type': 'Objects.Geometry.Point'
-			}
-			segment['end'] = {
-				'x': end_x,
-				'y': end_y,
-				'z': end_z,
-				'units': 'm',
-				'speckle_type': 'Objects.Geometry.Point'
-			}
-			segment['units'] = 'm'
-			segment['speckle_type'] = 'Objects.Geometry.Line'
-
-			# return bos.recompose_base(segment)
-			return segment
-
-		oos = BaseObjectSerializer()
-		opening = oos.traverse_base(obj)[1]
-
-		bbox = self.wrapper.commands.Get2DBoundingBoxes([selection.typeOfElement.elementId])[0].boundingBox2D
-
-		genHeight = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId,], [self.propIds['Geometry_OpeningTotalThickness']])
-		height = genHeight[0].propertyValues[0].propertyValue.value
-		bottomElv = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId,], [self.propIds['General_BottomElevationToHomeStory']])
-		btmElv = bottomElv[0].propertyValues[0].propertyValue.value
-
-		bos = BaseObjectSerializer()
-		shaft = bos.traverse_base(Base())[1]
-
+	def map_opening_horizontal(self, obj, **parameters):
+		"""
+		Remap opening schema for horizontal elements.
+		"""
 		overrides = {
-			'type': 'Opening Cut',
-			'bottomLevel': opening['level'],
-			'height': height,
+			'height': parameters['host_height'],
 			'parameters': {
 				'WALL_BASE_OFFSET': {
-					'value': btmElv,
+					'value': parameters['host_top_elevation'] - parameters['host_height'],	# todo
+				},
+				'WALL_TOP_OFFSET': {
+					'value': parameters['host_top_elevation'],	# todo
 				}
 			},
 			'outline': {
 				'segments': []
 			}
 		}
-
-		shaft = self.upd_schema(shaft, self.schema['shaft'], overrides)
-		shaft = bos.recompose_base(shaft)
-
-		# add polyline segments
-		shaft['outline']['segments'].append(newSegment(bbox.xMin, bbox.yMin, btmElv,	bbox.xMin, bbox.yMax, btmElv))
-		shaft['outline']['segments'].append(newSegment(bbox.xMin, bbox.yMax, btmElv,	bbox.xMax, bbox.yMax, btmElv))
-		shaft['outline']['segments'].append(newSegment(bbox.xMax, bbox.yMax, btmElv,	bbox.xMax, bbox.yMin, btmElv))
-		shaft['outline']['segments'].append(newSegment(bbox.xMax, bbox.yMin, btmElv,	bbox.xMin, bbox.yMin, btmElv))
+		shaft = self.upd_schema(obj, self.schema['shaft'], overrides)
+		# flat list with x,y,z coordinates of each point
+		# the last pair is redundant, as points to the first coordinates
+		coords = obj['outline']['value']
+		for i in range(0, len(coords) // 3 - 2):
+			sidx = i * 3
+			eidx = (i + 1) * 3
+			shaft['outline']['segments'].append(self.make_segment(
+				coords[sidx], coords[sidx + 1], coords[sidx + 2],
+				coords[eidx], coords[eidx + 1], coords[eidx + 2]
+			))
+		shaft['outline']['segments'].append(self.make_segment(
+				coords[-6], coords[-5],coords[-4],
+				coords[0], coords[1], coords[2]
+		))
 
 		return shaft
 
-	def map_opening_wall(self, obj, *args):
-
-		opening = obj
-		host_height = args[0]
-
+	def map_opening_vertical(self, obj, **parameters):
+		"""
+		Remap opening schema for vertical elements.
+		"""
 		overrides = {
 			'parameters': {
 				'WALL_TOP_OFFSET': {
-					'value': -1 * (host_height - opening['anchorAltitude']),
+					'value': -1 * (parameters['host_height'] - obj['anchorAltitude']),
 				},
 				'WALL_BASE_OFFSET': {
-					'value': opening['anchorAltitude'] - opening['height'],
+					'value': obj['anchorAltitude'] - obj['height'],
 				}
 			},
 		}
-
-		shaft = self.upd_schema(opening, self.schema['shaft_wall'], overrides)
+		shaft = self.upd_schema(obj, self.schema['shaft_wall'], overrides)
 		return shaft
 
 	def	map_railing(self, obj, selection, *args):
@@ -306,7 +327,7 @@ class TranslatorArchicad2Revit(Translator):
 	def map_roof(self, obj, selection, *args):
 		"""
 		Remap roof schema
-.sp		"""
+		"""
 		bos = BaseObjectSerializer()
 		roof = bos.traverse_base(obj)[1]
 
@@ -324,6 +345,8 @@ class TranslatorArchicad2Revit(Translator):
 
 		roof = self.upd_schema(roof, self.schema['roof'], overrides)
 
+		# todo: check openings
+
 		return bos.recompose_base(roof)
 
 	def map_slab(self, obj, selection, *args):
@@ -331,14 +354,15 @@ class TranslatorArchicad2Revit(Translator):
 		Remap slab schema.
 		"""
 		bos = BaseObjectSerializer()
-		floor = bos.traverse_base(obj)[1]
+		slab = bos.traverse_base(obj)[1]
 
-		structure = str(floor['thickness']) + ' ' + floor['buildingMaterialName'] if floor['buildingMaterialName'] else floor['compositeName']
+		structure = str(slab['thickness']) + ' ' + slab['buildingMaterialName'] if slab['buildingMaterialName'] else slab['compositeName']
 		top_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
+		top_elevation_home_value = top_elevation_home[0].propertyValues[0].propertyValue.value
 
 		overrides = {
-			'type': floor['structure'] + ' ' + structure,
-			'TopElevationToHomeStory': top_elevation_home[0].propertyValues[0].propertyValue.value,
+			'type': slab['structure'] + ' ' + structure,
+			'TopElevationToHomeStory': top_elevation_home_value,
 			'parameters': {
 				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
 					'value': top_elevation_home[0].propertyValues[0].propertyValue.value
@@ -346,7 +370,21 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
-		floor = self.upd_schema(floor, self.schema['floor'], overrides)
+		# update child elements (doors, windows, openings etc)
+		if 'elements' in slab and slab['elements']:
+			for e in range (0, len(slab['elements'])):
+				element = slab['elements'][e]
+				print (element['applicationId'].lower()+'*')
+				if element['elementType'] == 'Opening':
+					opening = self.map_opening_horizontal(
+						slab['elements'][e],
+						host_height = slab['thickness'],
+						host_top_elevation = top_elevation_home_value
+					)
+					opening['bottomLevel'] = slab['level']
+					slab['elements'][e] = opening
+
+		floor = self.upd_schema(slab, self.schema['floor'], overrides)
 
 		return bos.recompose_base(floor)
 
@@ -422,43 +460,12 @@ class TranslatorArchicad2Revit(Translator):
 					wall['elements'][e] = wido
 
 				elif element['elementType'] == 'Opening':
-					opening = self.map_opening_wall(
+					opening = self.map_opening_vertical(
 						wall['elements'][e],
-						wall['height']
+						host_height = wall['height']
 					)
 					wall['elements'][e] = opening
-
 
 		wall = self.upd_schema(wall, self.schema['wall'], overrides)
 
 		return bos.recompose_base(wall)
-
-
-
-
-	def map_levels(self, obj):
-
-		obj['@levels'] = {}
-
-		def new_level(schema, index, name, elevation):
-
-			bos = BaseObjectSerializer()
-			level = bos.traverse_base(Base())[1]
-
-			for key, value in schema.items():
-				level[key] = value
-
-			if not name:
-				name = str(index) + ' level on ' + str(elevation * 1000)
-
-			level['index'] = index
-			level['name'] = name
-			level['elevation'] = elevation
-
-			return bos.recompose_base(level)
-
-		story_info = self.wrapper.tapir.run('GetStoryInfo', {})
-		stories = story_info['stories']
-		for story in stories[::-1]:
-			level = new_level(self.schema['level'], story['index'], story['uName'], story['level'])
-			obj['@levels'][story['index']] = level
