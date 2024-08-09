@@ -272,14 +272,12 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		Remap opening schema for horizontal elements.
 		"""
+		print (parameters['host_height'])
 		overrides = {
 			'height': parameters['host_height'],
 			'parameters': {
 				'WALL_BASE_OFFSET': {
 					'value': parameters['host_top_elevation'] - parameters['host_height'],	# todo
-				},
-				'WALL_TOP_OFFSET': {
-					'value': parameters['host_top_elevation'],	# todo
 				}
 			},
 			'outline': {
@@ -359,6 +357,9 @@ class TranslatorArchicad2Revit(Translator):
 		structure = str(slab['thickness']) + ' ' + slab['buildingMaterialName'] if slab['buildingMaterialName'] else slab['compositeName']
 		top_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
 		top_elevation_home_value = top_elevation_home[0].propertyValues[0].propertyValue.value
+
+		if slab['referencePlaneLocation'] == 'Top':
+			top_elevation_home_value = top_elevation_home_value - slab['thickness']
 
 		overrides = {
 			'type': slab['structure'] + ' ' + structure,

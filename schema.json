@@ -149,6 +149,7 @@
 			"speckle_type": "Objects.BuiltElements.Opening:Objects.BuiltElements.Revit.RevitOpening:Objects.BuiltElements.Revit.RevitShaft",
 			"type": "Opening Cut",
 			"units": "m",
+			"height": 0,
 			"bottomLevel": null,
 			"parameters": {
 				"speckle_type": "Base",
