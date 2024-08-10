@@ -272,12 +272,12 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		Remap opening schema for horizontal elements.
 		"""
-		print (parameters['host_height'])
+		height = obj['finiteBodyLength'] if obj['finiteBodyLength'] > 0 else parameters['host_height']
 		overrides = {
-			'height': parameters['host_height'],
+			'height': height,
 			'parameters': {
 				'WALL_BASE_OFFSET': {
-					'value': parameters['host_top_elevation'] - parameters['host_height'],	# todo
+					'value': parameters['host_top_elevation'] - parameters['host_height'] + obj['extrusionStartOffSet'],	# todo
 				}
 			},
 			'outline': {
@@ -306,14 +306,32 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		Remap opening schema for vertical elements.
 		"""
+		# btm_height = obj['outline']['value'][2]
+		# top_height = obj['outline']['value'][8]
+
+		relations = {
+			0: {'base': obj['anchorAltitude'] - obj['height'], 'top': obj['anchorAltitude']},
+			1: {'base': obj['anchorAltitude'] - obj['height'], 'top': obj['anchorAltitude']},
+			2: {'base': obj['anchorAltitude'] - obj['height'], 'top': obj['anchorAltitude']},
+			3: {'base': obj['anchorAltitude'] - obj['height']/2, 'top': obj['anchorAltitude'] + obj['height']/2},
+			4: {'base': obj['anchorAltitude'] - obj['height']/2, 'top': obj['anchorAltitude'] + obj['height']/2},
+			5: {'base': obj['anchorAltitude'] - obj['height']/2, 'top': obj['anchorAltitude'] + obj['height']/2},
+			6: {'base': obj['anchorAltitude'], 'top': obj['anchorAltitude'] + obj['height']},
+			7: {'base': obj['anchorAltitude'], 'top': obj['anchorAltitude'] + obj['height']},
+			8: {'base': obj['anchorAltitude'], 'top': obj['anchorAltitude'] + obj['height']}
+		}
+
+		top_offset = abs(parameters['host_top_offset']) if parameters['host_top_offset'] < 0 else 0
+
 		overrides = {
 			'parameters': {
-				'WALL_TOP_OFFSET': {
-					'value': -1 * (parameters['host_height'] - obj['anchorAltitude']),
-				},
 				'WALL_BASE_OFFSET': {
-					'value': obj['anchorAltitude'] - obj['height'],
-				}
+					'value': relations[obj['anchorIndex']]['base'],
+				},
+				'WALL_TOP_OFFSET': {
+					# 'value': 0,
+					'value': -1 * (parameters['host_base_offset'] + parameters['host_height'] + -1*parameters['host_top_offset'] - relations[obj['anchorIndex']]['top']),
+				},
 			},
 		}
 		shaft = self.upd_schema(obj, self.schema['shaft_wall'], overrides)
@@ -461,9 +479,12 @@ class TranslatorArchicad2Revit(Translator):
 					wall['elements'][e] = wido
 
 				elif element['elementType'] == 'Opening':
+					print (wall['height'])
 					opening = self.map_opening_vertical(
 						wall['elements'][e],
-						host_height = wall['height']
+						host_height = wall['height'],
+						host_base_offset = wall['baseOffset'],
+						host_top_offset = wall['topOffset']
 					)
 					wall['elements'][e] = opening
 
