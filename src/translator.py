@@ -274,7 +274,7 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		height = obj['finiteBodyLength'] if obj['finiteBodyLength'] > 0 else parameters['host_height']
 		overrides = {
-			'height': height,
+			# 'height': height,
 			'parameters': {
 				'WALL_BASE_OFFSET': {
 					'value': parameters['host_top_elevation'] - parameters['host_height'] + obj['extrusionStartOffSet'],	# todo
@@ -287,18 +287,19 @@ class TranslatorArchicad2Revit(Translator):
 		shaft = self.upd_schema(obj, self.schema['shaft'], overrides)
 		# flat list with x,y,z coordinates of each point
 		# the last pair is redundant, as points to the first coordinates
-		coords = obj['outline']['value']
-		for i in range(0, len(coords) // 3 - 2):
-			sidx = i * 3
-			eidx = (i + 1) * 3
+		if 'value' in obj['outline']:
+			coords = obj['outline']['value']
+			for i in range(0, len(coords) // 3 - 2):
+				sidx = i * 3
+				eidx = (i + 1) * 3
+				shaft['outline']['segments'].append(self.make_segment(
+					coords[sidx], coords[sidx + 1], coords[sidx + 2],
+					coords[eidx], coords[eidx + 1], coords[eidx + 2]
+				))
 			shaft['outline']['segments'].append(self.make_segment(
-				coords[sidx], coords[sidx + 1], coords[sidx + 2],
-				coords[eidx], coords[eidx + 1], coords[eidx + 2]
+					coords[-6], coords[-5],coords[-4],
+					coords[0], coords[1], coords[2]
 			))
-		shaft['outline']['segments'].append(self.make_segment(
-				coords[-6], coords[-5],coords[-4],
-				coords[0], coords[1], coords[2]
-		))
 
 		return shaft
 
@@ -376,15 +377,15 @@ class TranslatorArchicad2Revit(Translator):
 		top_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
 		top_elevation_home_value = top_elevation_home[0].propertyValues[0].propertyValue.value
 
-		if slab['referencePlaneLocation'] == 'Top':
-			top_elevation_home_value = top_elevation_home_value - slab['thickness']
+		if slab['referencePlaneLocation'] == 'Bottom':
+			top_elevation_home_value = top_elevation_home_value + slab['thickness']
 
 		overrides = {
 			'type': slab['structure'] + ' ' + structure,
 			'TopElevationToHomeStory': top_elevation_home_value,
 			'parameters': {
 				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
-					'value': top_elevation_home[0].propertyValues[0].propertyValue.value
+					'value': top_elevation_home_value
 				}
 			}
 		}

@@ -36,7 +36,7 @@ class SpeckleWrapper():
 
 		return result
 
-	def publish(self, obj, message):
+	def publish(self, obj, branch, message):
 
 		bos = BaseObjectSerializer()
 		base = obj
@@ -45,6 +45,6 @@ class SpeckleWrapper():
 		commit = self.client.commit.create(
 		    'aeb487f0e6',
 		    obj_updated,
-		    branch_name = 'opening',
+		    branch_name = branch,
 		    message = message
 		)
