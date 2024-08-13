@@ -50,6 +50,8 @@ class TranslatorArchicad2Revit(Translator):
 
 		self.propIds = self.get_prop_ids()
 
+	# todo: keep object in translator or write access methods
+
 	def upd_schema(self, obj, schema, parameters):
 
 	    for key, value in schema.items():
@@ -69,6 +71,7 @@ class TranslatorArchicad2Revit(Translator):
 			'General_TopLinkStory': 				self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
 			'General_BottomElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_BottomElevationToHomeStory'),
 			'General_TopElevationToHomeStory': 		self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
+			'Zone_ZoneCategoryCode': 		self.wrapper.utilities.GetBuiltInPropertyId('Zone_ZoneCategoryCode'),
 		}
 
 		return propIds
@@ -526,6 +529,41 @@ class TranslatorArchicad2Revit(Translator):
 		zone['category'] = 'Rooms'
 
 		zone['boundries'] = []
+
+		zone['parameters'] = {}
+		zone['parameters']['speckle_type'] = 'Base'
+		zone['parameters']['applicationId'] = None
+
+		zone_cat = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['Zone_ZoneCategoryCode']])
+		category = str(zone_cat[0].propertyValues[0].propertyValue.value) if zone_cat else ''
+
+		zone['parameters']['ALL_MODEL_INSTANCE_COMMENTS'] = {
+			'name': 'Comments',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': 'ALL_MODEL_INSTANCE_COMMENTS',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': category
+		}
+
+		zone['parameters']['10fb72de-237e-4b9c-915b-8849b8907695'] = {
+			'name': 'ADSK_Номер квартиры',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '10fb72de-237e-4b9c-915b-8849b8907695',
+			'applicationUnit': 'autodesk.unit.unit:meters-1.0.1',
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': zone['number']
+		}
 
 		for segment in zone['outline']['segments']:
 
