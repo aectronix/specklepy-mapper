@@ -4,6 +4,9 @@ from .archicad import ArchicadWrapper
 from .client import SpeckleWrapper
 from .translator import TranslatorFactory
 
+from specklepy.objects.base import Base
+from specklepy.serialization.base_object_serializer import BaseObjectSerializer
+
 class Worker():
 
 	def __init__(self):
@@ -26,7 +29,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', '164480c460')
+		commit = self.speckle.retrieve('aeb487f0e6', '5e9199fcb6')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -71,6 +74,27 @@ class Worker():
 						objects[i],										# speckle object
 						selection_types[t][guid],						# selectec ac element
 						subselection,									# selected sub element (wido, opening etc)
-						parameters[t] if t in parameters else None)		# additional parameters
+						parameters[t] if t in parameters else None,		# additional parameters
+					)
 
-		self.speckle.publish(commit, 'main', 'test exp 1')
+
+		# boundries
+		obs = BaseObjectSerializer()
+		lines = obs.traverse_base(Base())[1]
+		lines['name'] = 'Room Separation Lines'
+		lines['speckle_type'] = 'Speckle.Core.Models.Collection'
+		lines['applicationId'] = 'Room Separation Lines'
+		lines['collectionType'] = 'Revit Category'
+		lines['elements'] = []
+		boundries = obs.recompose_base(lines)
+		commit['elements'].append(boundries)
+
+		for ec in commit['elements']:
+			if ec.name == 'Zone':
+				for e in ec['elements']:
+					if hasattr(e, 'boundries'):
+						for b in e['boundries']:
+							boundries['elements'].append(b)
+
+		# push commit
+		self.speckle.publish(commit, 'test', 'zone exp 2.2b')

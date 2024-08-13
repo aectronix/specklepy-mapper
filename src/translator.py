@@ -428,7 +428,7 @@ class TranslatorArchicad2Revit(Translator):
 
 	def map_wall(self, obj, selection, subselection=None, parameters=None):
 		"""
-		Remap slab schema.
+		Remap wall schema.
 		"""
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(obj)[1]
@@ -514,4 +514,33 @@ class TranslatorArchicad2Revit(Translator):
 		return bos.recompose_base(wall)
 
 	def map_zone(self, obj, selection, *args, **parameters):
-		pass
+		"""
+		Remap zone schema.
+		"""
+		bos = BaseObjectSerializer()
+		zone = bos.traverse_base(obj)[1]
+
+		# zone = obj
+
+		zone['type'] = 'Room'
+		zone['category'] = 'Rooms'
+
+		zone['boundries'] = []
+
+		for segment in zone['outline']['segments']:
+
+			obs = BaseObjectSerializer()
+			boundry = obs.traverse_base(Base())[1]
+
+			boundry = {}
+			boundry['test'] = True
+
+			boundry['level'] = zone['level']
+			boundry['units'] = 'm'
+			boundry['baseCurve'] = segment
+			boundry['speckle_type'] = 'Objects.BuiltElements.Revit.Curve.RoomBoundaryLine'
+
+			# zone['boundries'].append(obs.recompose_base(boundry))
+			zone['boundries'].append(boundry)
+
+		return bos.recompose_base(zone)
