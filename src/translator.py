@@ -172,8 +172,20 @@ class TranslatorArchicad2Revit(Translator):
 			8: {'jy': 3, 'jz': 3},	# right, bottom
 		}
 
+		if beam['segments']['Segment #1']['assemblySegmentData']['buildingMaterial']:
+			material = beam['segments']['Segment #1']['assemblySegmentData']['buildingMaterial']
+		else:
+			material = beam['segments']['Segment #1']['assemblySegmentData']['profileAttrName']
+
+
+		if beam['segments']['Segment #1']['assemblySegmentData']['topMaterial']:
+			surface = ' ' + beam['segments']['Segment #1']['assemblySegmentData']['topMaterial']
+		else:
+			surface = ''
+
+
 		overrides = {
-			'type': 'Beam ' + beam['segments']['Segment #1']['assemblySegmentData']['buildingMaterial'] + ' ' + str(width) + ' x ' + str(height),
+			'type': 'Beam ' + str(material) + ' ' + str(width) + ' x ' + str(height) + str(surface),
 			'parameters': {
 				'Y_JUSTIFICATION': {
 					'value': justification[beam['anchorPoint']]['jy']
@@ -223,6 +235,9 @@ class TranslatorArchicad2Revit(Translator):
 
 		return bos.recompose_base(column)
 
+	def map_curtainwall(self, obj, selection, *args, **parameters):
+		pass
+
 	def map_wido(self, obj, selection=None, parameters=None):
 		"""
 		Remap door and window schema.
@@ -256,10 +271,10 @@ class TranslatorArchicad2Revit(Translator):
 	def map_window(self, obj, selection=None, parameters=None):
 		return self.map_wido(obj, selection, parameters)
 
-	def map_object(self, obj, selection, *args):
+	def map_morph(self, obj, selection, *args):
 		pass
 
-	def map_morph(self, obj, selection, *args):
+	def map_object(self, obj, selection, *args):
 		pass
 
 	def map_opening(self, obj, selection, *args):
@@ -419,7 +434,13 @@ class TranslatorArchicad2Revit(Translator):
 		wall = bos.traverse_base(obj)[1]
 
 		# need to retrieve top link info
-		structure = str(wall['thickness']) + ' ' + wall['buildingMaterialName'] if wall['buildingMaterialName'] else wall['compositeName']
+		if wall['buildingMaterialName']:
+			material = wall['buildingMaterialName']
+		elif wall['compositeName']:
+			material = wall['compositeName']
+		else:
+			material = wall['profileName']
+		material = str(wall['thickness']) + ' ' + material
 		top_level = self.get_top_level(obj, selection, parameters)
 		if top_level == None:
 			top_level = wall['level']
@@ -450,7 +471,7 @@ class TranslatorArchicad2Revit(Translator):
 		off_y = (out - fix) * direction['x'] * flip
 
 		overrides = {
-			'type': str(wall['structure']) + ' ' + str(structure),
+			'type': str(wall['structure']) + ' ' + str(material),
 			'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
@@ -490,5 +511,7 @@ class TranslatorArchicad2Revit(Translator):
 					wall['elements'][e] = opening
 
 		wall = self.upd_schema(wall, self.schema['wall'], overrides)
-
 		return bos.recompose_base(wall)
+
+	def map_zone(self, obj, selection, *args, **parameters):
+		pass

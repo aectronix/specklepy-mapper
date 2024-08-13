@@ -26,7 +26,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', '7edcbf558e')
+		commit = self.speckle.retrieve('aeb487f0e6', '164480c460')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -65,7 +65,7 @@ class Worker():
 					subselection = {}
 					if hasattr(objects[i], 'elements') and objects[i]['elements']:
 						for e in objects[i]['elements']:
-							subselection[e['applicationId'].lower()] = selection_types[e['elementType'].lower()][e['applicationId'].lower()]
+							subselection[e['applicationId'].lower()] = selection_types[e['elementType'].lower()][e['applicationId'].lower()] if e['applicationId'].lower() in selection_types[e['elementType'].lower()] else None
 
 					objects[i] = mapper(
 						objects[i],										# speckle object
@@ -73,4 +73,4 @@ class Worker():
 						subselection,									# selected sub element (wido, opening etc)
 						parameters[t] if t in parameters else None)		# additional parameters
 
-		self.speckle.publish(commit, 'temp', 'temp exp 0.1b')
+		self.speckle.publish(commit, 'main', 'test exp 1')

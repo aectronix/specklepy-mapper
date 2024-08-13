@@ -1,3 +1,5 @@
+import time
+
 from specklepy.api.client import SpeckleClient
 from specklepy.api.credentials import get_default_account
 from specklepy.api import operations
@@ -36,15 +38,24 @@ class SpeckleWrapper():
 
 		return result
 
-	def publish(self, obj, branch, message):
+	def publish(self, obj, branch, message, retries=10, delay=3):
 
 		bos = BaseObjectSerializer()
 		base = obj
-		obj_updated = operations.send(base, [self.transport])
 
-		commit = self.client.commit.create(
-		    'aeb487f0e6',
-		    obj_updated,
-		    branch_name = branch,
-		    message = message
-		)
+		for attempt in range(retries):
+			try:
+				obj_updated = operations.send(base, [self.transport])
+				commit = self.client.commit.create(
+				    'aeb487f0e6',
+				    obj_updated,
+				    branch_name = branch,
+				    message = message
+				)
+				return commit
+			except Exception as e:
+				print(f'Attempt {attempt + 1} failed: {e}')
+				if attempt < retries - 1:
+					time.sleep(delay)
+				else:
+					raise
