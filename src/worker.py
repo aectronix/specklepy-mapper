@@ -29,7 +29,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', 'dd30da2ba3')
+		commit = self.speckle.retrieve('aeb487f0e6', 'e5de162b8f')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -97,4 +97,4 @@ class Worker():
 							boundries['elements'].append(b)
 
 		# push commit
-		self.speckle.publish(commit, 'test', 'zone exp 2.4a4')
+		self.speckle.publish(commit, 'test', 'slab exp 2')

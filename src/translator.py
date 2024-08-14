@@ -72,6 +72,8 @@ class TranslatorArchicad2Revit(Translator):
 			'General_BottomElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_BottomElevationToHomeStory'),
 			'General_TopElevationToHomeStory': 		self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
 			'Zone_ZoneCategoryCode': 		self.wrapper.utilities.GetBuiltInPropertyId('Zone_ZoneCategoryCode'),
+			'Geometry_ProfileHeight': 		self.wrapper.utilities.GetBuiltInPropertyId('Geometry_ProfileHeight'),
+			'Geometry_ProfileWidth': 		self.wrapper.utilities.GetBuiltInPropertyId('Geometry_ProfileWidth'),
 		}
 
 		return propIds
@@ -161,8 +163,8 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		beam = bos.traverse_base(obj)[1]
 
-		width = round(beam['segments']['Segment #1']['assemblySegmentData']['nominalWidth']*1000)/1000
-		height = round(beam['segments']['Segment #1']['assemblySegmentData']['nominalHeight']*1000)/1000
+		# width = round(beam['segments']['Segment #1']['assemblySegmentData']['nominalWidth']*1000)/1000
+		# height = round(beam['segments']['Segment #1']['assemblySegmentData']['nominalHeight']*1000)/1000
 		justification = {
 			0: {'jy': 0, 'jz': 0},	# left, top
 			1: {'jy': 1, 'jz': 0},	# center, top
@@ -180,12 +182,18 @@ class TranslatorArchicad2Revit(Translator):
 		else:
 			material = beam['segments']['Segment #1']['assemblySegmentData']['profileAttrName']
 
+		surface = ''
+		if 'topMaterial' in beam['segments']['Segment #1']:
+			surface = ' ' + str(beam['segments']['Segment #1']['topMaterial'])
 
-		if beam['segments']['Segment #1']['assemblySegmentData']['topMaterial']:
-			surface = ' ' + beam['segments']['Segment #1']['assemblySegmentData']['topMaterial']
-		else:
-			surface = ''
+		w = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['Geometry_ProfileWidth']])
+		h = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['Geometry_ProfileHeight']])
 
+		width = ''
+		if w: width = w[0].propertyValues[0].propertyValue.value
+
+		height = ''
+		if h: height = h[0].propertyValues[0].propertyValue.value
 
 		overrides = {
 			'type': 'Beam ' + str(material) + ' ' + str(width) + ' x ' + str(height) + str(surface),
@@ -203,6 +211,34 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		beam = self.upd_schema(beam, self.schema['beam'], overrides)
+
+		# beam['parameters']['70ba933eba1ec9e34b9ef6d9edf9ac9f'] = {
+		# 	'name': 'X',
+		# 	'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+		# 	'applicationId': None,
+		# 	'applicationInternalName': 'X',
+		# 	'applicationUnit': None,
+		# 	'applicationUnitType': 'autodesk.unit.unit:meters-1.0.1',
+		# 	'isReadOnly': False,
+		# 	'isShared': False,
+		# 	'isTypeParameter': True,
+		# 	'units': 'm',
+		# 	'value': width
+		# }
+
+		# beam['parameters']['af752dcd9dead8ac634180ceb470bee5'] = {
+		# 	'name': 'Y',
+		# 	'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+		# 	'applicationId': None,
+		# 	'applicationInternalName': 'Y',
+		# 	'applicationUnit': None,
+		# 	'applicationUnitType': 'autodesk.unit.unit:meters-1.0.1',
+		# 	'isReadOnly': False,
+		# 	'isShared': False,
+		# 	'isTypeParameter': True,
+		# 	'units': 'm',
+		# 	'value': height
+		# }
 
 		return bos.recompose_base(beam)
 
@@ -392,18 +428,30 @@ class TranslatorArchicad2Revit(Translator):
 		slab = bos.traverse_base(obj)[1]
 
 		structure = str(slab['thickness']) + ' ' + slab['buildingMaterialName'] if slab['buildingMaterialName'] else slab['compositeName']
-		top_elevation_home = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
-		top_elevation_home_value = top_elevation_home[0].propertyValues[0].propertyValue.value
+		top = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
+		top_elevation = top[0].propertyValues[0].propertyValue.value
+		# btm = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_BottomElevationToHomeStory']])
+		# btm_elevation = btm[0].propertyValues[0].propertyValue.value
 
-		if slab['referencePlaneLocation'] == 'Bottom':
-			top_elevation_home_value = top_elevation_home_value + slab['thickness']
+		# if slab['referencePlaneLocation'] == 'Bottom':
+		# 	top_elevation_home_value = top_elevation_home_value + slab['thickness']
+
+		# ref_offset = {
+		# 	'Top': 0,
+		# 	'Core Top': top_elevation - btm_elevation,
+		# 	'Bottom': slab['thickness'],
+		# 	'Core Bottom': top_elevation - btm_elevation,
+		# }
+
+		# print (top_elevation)
+		# print ((top_elevation - btm_elevation) + ref_offset[slab['referencePlaneLocation']])
 
 		overrides = {
 			'type': slab['structure'] + ' ' + structure,
-			'TopElevationToHomeStory': top_elevation_home_value,
+			'TopElevationToHomeStory': top_elevation,
 			'parameters': {
 				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
-					'value': top_elevation_home_value
+					'value': top_elevation
 				}
 			}
 		}
