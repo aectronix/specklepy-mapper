@@ -68,12 +68,15 @@ class TranslatorArchicad2Revit(Translator):
 	def get_prop_ids(self):
 
 		propIds = {
+			'General_ElementID': 					self.wrapper.utilities.GetBuiltInPropertyId('General_ElementID'),
 			'General_TopLinkStory': 				self.wrapper.utilities.GetBuiltInPropertyId('General_TopLinkStory'),
 			'General_BottomElevationToHomeStory': 	self.wrapper.utilities.GetBuiltInPropertyId('General_BottomElevationToHomeStory'),
 			'General_TopElevationToHomeStory': 		self.wrapper.utilities.GetBuiltInPropertyId('General_TopElevationToHomeStory'),
-			'Zone_ZoneCategoryCode': 		self.wrapper.utilities.GetBuiltInPropertyId('Zone_ZoneCategoryCode'),
-			'Geometry_ProfileHeight': 		self.wrapper.utilities.GetBuiltInPropertyId('Geometry_ProfileHeight'),
-			'Geometry_ProfileWidth': 		self.wrapper.utilities.GetBuiltInPropertyId('Geometry_ProfileWidth'),
+			'Zone_ZoneCategoryCode': 				self.wrapper.utilities.GetBuiltInPropertyId('Zone_ZoneCategoryCode'),
+			'Geometry_ProfileHeight': 				self.wrapper.utilities.GetBuiltInPropertyId('Geometry_ProfileHeight'),
+			'Geometry_ProfileWidth': 				self.wrapper.utilities.GetBuiltInPropertyId('Geometry_ProfileWidth'),
+			'Zone_CalculatedArea': 					self.wrapper.utilities.GetBuiltInPropertyId('Zone_CalculatedArea'),
+			'WindowDoor_Orientation': 				self.wrapper.utilities.GetBuiltInPropertyId('WindowDoor_Orientation'),
 		}
 
 		return propIds
@@ -211,35 +214,6 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		beam = self.upd_schema(beam, self.schema['beam'], overrides)
-
-		# beam['parameters']['70ba933eba1ec9e34b9ef6d9edf9ac9f'] = {
-		# 	'name': 'X',
-		# 	'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-		# 	'applicationId': None,
-		# 	'applicationInternalName': 'X',
-		# 	'applicationUnit': None,
-		# 	'applicationUnitType': 'autodesk.unit.unit:meters-1.0.1',
-		# 	'isReadOnly': False,
-		# 	'isShared': False,
-		# 	'isTypeParameter': True,
-		# 	'units': 'm',
-		# 	'value': width
-		# }
-
-		# beam['parameters']['af752dcd9dead8ac634180ceb470bee5'] = {
-		# 	'name': 'Y',
-		# 	'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-		# 	'applicationId': None,
-		# 	'applicationInternalName': 'Y',
-		# 	'applicationUnit': None,
-		# 	'applicationUnitType': 'autodesk.unit.unit:meters-1.0.1',
-		# 	'isReadOnly': False,
-		# 	'isShared': False,
-		# 	'isTypeParameter': True,
-		# 	'units': 'm',
-		# 	'value': height
-		# }
-
 		return bos.recompose_base(beam)
 
 	def map_column(self, obj, selection, subselection=None, parameters=None):
@@ -277,16 +251,24 @@ class TranslatorArchicad2Revit(Translator):
 	def map_curtainwall(self, obj, selection, *args, **parameters):
 		pass
 
+	def map_grid(self, obj, selection, *args, **parameters):
+		pass
+
 	def map_wido(self, obj, selection=None, parameters=None):
 		"""
 		Remap door and window schema.
 		"""
 		wido = obj
 
+		wido_id = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_ElementID']])
+		wido_orientation = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['WindowDoor_Orientation']])
+		orientation = wido_orientation[0].propertyValues[0].propertyValue.value
+		elemId = wido_id[0].propertyValues[0].propertyValue.value
+
 		overrides = {
-			'type': str(obj['libraryPart']) + ' ' + str(obj['width']) + ' x ' + str(obj['height']),
+			'type': str(obj['libraryPart']) + ' ' + str(obj['width']) + ' x ' + str(obj['height']) + ' ' + str(elemId) + ' (' + str(orientation) + ')',
 			'definition': {
-				'type': str(obj['libraryPart'])  + ' ' + str(obj['width']) + ' x ' + str(obj['height']),
+				'type': str(obj['libraryPart'])  + ' ' + str(obj['width']) + ' x ' + str(obj['height']) + ' ' + str(elemId) + ' (' + str(orientation) + ')',
 			},
 			'transform': {
 				'matrix': [
@@ -430,21 +412,6 @@ class TranslatorArchicad2Revit(Translator):
 		structure = str(slab['thickness']) + ' ' + slab['buildingMaterialName'] if slab['buildingMaterialName'] else slab['compositeName']
 		top = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_TopElevationToHomeStory']])
 		top_elevation = top[0].propertyValues[0].propertyValue.value
-		# btm = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['General_BottomElevationToHomeStory']])
-		# btm_elevation = btm[0].propertyValues[0].propertyValue.value
-
-		# if slab['referencePlaneLocation'] == 'Bottom':
-		# 	top_elevation_home_value = top_elevation_home_value + slab['thickness']
-
-		# ref_offset = {
-		# 	'Top': 0,
-		# 	'Core Top': top_elevation - btm_elevation,
-		# 	'Bottom': slab['thickness'],
-		# 	'Core Bottom': top_elevation - btm_elevation,
-		# }
-
-		# print (top_elevation)
-		# print ((top_elevation - btm_elevation) + ref_offset[slab['referencePlaneLocation']])
 
 		overrides = {
 			'type': slab['structure'] + ' ' + structure,
@@ -465,7 +432,7 @@ class TranslatorArchicad2Revit(Translator):
 					opening = self.map_opening_horizontal(
 						slab['elements'][e],
 						host_height = slab['thickness'],
-						host_top_elevation = top_elevation_home_value
+						host_top_elevation = top_elevation
 					)
 					opening['bottomLevel'] = slab['level']
 					slab['elements'][e] = opening
@@ -548,11 +515,9 @@ class TranslatorArchicad2Revit(Translator):
 						{'sx': sx, 'sy': sy, 'sz': sz, 'dx': direction['x'], 'dy': direction['y']}
 					)
 					wido['level'] = wall['level']
-
 					wall['elements'][e] = wido
 
 				elif element['elementType'] == 'Opening':
-					print (wall['height'])
 					opening = self.map_opening_vertical(
 						wall['elements'][e],
 						host_height = wall['height'],
@@ -571,7 +536,18 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		zone = bos.traverse_base(obj)[1]
 
-		# zone = obj
+		category = ''
+		apt_id = ''
+		apt_type = ''
+
+		calc_area = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['Zone_CalculatedArea']])
+		area = calc_area[0].propertyValues[0].propertyValue.value
+
+		if 'elementProperties' in zone and 'ZONESUM' in zone['elementProperties']:
+			zone_prop = zone['elementProperties']['ZONESUM']
+			category = zone_prop['Кат  Пом ']
+			apt_id = zone_prop['Номер квартиры']
+			apt_type = zone_prop['Тип Квартиры']
 
 		zone['type'] = 'Room'
 		zone['category'] = 'Rooms'
@@ -581,9 +557,6 @@ class TranslatorArchicad2Revit(Translator):
 		zone['parameters'] = {}
 		zone['parameters']['speckle_type'] = 'Base'
 		zone['parameters']['applicationId'] = None
-
-		zone_cat = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['Zone_ZoneCategoryCode']])
-		category = str(zone_cat[0].propertyValues[0].propertyValue.value) if zone_cat else ''
 
 		zone['parameters']['ALL_MODEL_INSTANCE_COMMENTS'] = {
 			'name': 'Comments',
@@ -599,18 +572,46 @@ class TranslatorArchicad2Revit(Translator):
 			'value': category
 		}
 
-		zone['parameters']['10fb72de-237e-4b9c-915b-8849b8907695'] = {
-			'name': 'ADSK_Номер квартиры',
+		zone['parameters']['1f06fc4b-03e4-4ea2-917e-cf475cc0ea73'] = {
+			'name': 'MRT_A_ApartmentID',
 			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
 			'applicationId': None,
-			'applicationInternalName': '10fb72de-237e-4b9c-915b-8849b8907695',
-			'applicationUnit': 'autodesk.unit.unit:meters-1.0.1',
+			'applicationInternalName': '1f06fc4b-03e4-4ea2-917e-cf475cc0ea73',
+			'applicationUnit': None,
 			'applicationUnitType': None,
 			'isReadOnly': False,
 			'isShared': True,
 			'isTypeParameter': False,
 			'units': None,
-			'value': zone['number']
+			'value': apt_id
+		}
+
+		zone['parameters']['2aaea987-7ae4-4484-8062-fbd77fc0bfbd'] = {
+			'name': 'MRT_A_ApartmentType',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '2aaea987-7ae4-4484-8062-fbd77fc0bfbd',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': apt_type
+		}
+
+		zone['parameters']['4ff65744-b44a-40a8-a428-d9b649e4173b'] = {
+			'name': 'MRT_A_RoomFixedArea',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '4ff65744-b44a-40a8-a428-d9b649e4173b',
+			'applicationUnit': 'autodesk.unit.unit:squareMeters-1.0.1',
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': 'm²',
+			'value': area
 		}
 
 		for segment in zone['outline']['segments']:

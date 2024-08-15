@@ -29,7 +29,7 @@ class Worker():
 
 	def translate(self):
 
-		commit = self.speckle.retrieve('aeb487f0e6', 'e5de162b8f')
+		commit = self.speckle.retrieve('aeb487f0e6', '1ef11c8d51')
 		a2r = TranslatorFactory.get('Archicad2Revit', self.archicad)
 
 		types = {}
@@ -64,7 +64,7 @@ class Worker():
 			for i in range(0, len(objects)):
 				guid = objects[i]['applicationId'].lower()
 				if guid in selection_types[t]:
-					print (guid)
+					print (guid + ' ' + t)
 					subselection = {}
 					if hasattr(objects[i], 'elements') and objects[i]['elements']:
 						for e in objects[i]['elements']:
@@ -97,4 +97,4 @@ class Worker():
 							boundries['elements'].append(b)
 
 		# push commit
-		self.speckle.publish(commit, 'test', 'slab exp 2')
+		self.speckle.publish(commit, 'transfer', 'hvr-dd00-01x2-p00-a exp a')
