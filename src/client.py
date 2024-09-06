@@ -52,7 +52,7 @@ class SpeckleWrapper():
 				    branch_name = branch,
 				    message = message
 				)
-				print (message + ' has been published')
+				print (f'"{message}" has been published')
 				return commit
 			except Exception as e:
 				print(f'Attempt {attempt + 1} failed: {e}')

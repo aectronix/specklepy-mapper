@@ -214,6 +214,7 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		beam = self.upd_schema(beam, self.schema['beam'], overrides)
+
 		return bos.recompose_base(beam)
 
 	def map_column(self, obj, selection, subselection=None, parameters=None):
@@ -283,7 +284,6 @@ class TranslatorArchicad2Revit(Translator):
 		}
 
 		wido = self.upd_schema(wido, self.schema[obj['elementType'].lower()], overrides)
-
 		return wido
 
 	def map_door(self, obj, selection=None, parameters=None):
@@ -536,18 +536,21 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		zone = bos.traverse_base(obj)[1]
 
+		div = ''
+		part = ''
 		category = ''
-		apt_id = ''
 		apt_type = ''
+		mod = 0
 
 		calc_area = self.wrapper.commands.GetPropertyValuesOfElements([selection.typeOfElement.elementId], [self.propIds['Zone_CalculatedArea']])
 		area = calc_area[0].propertyValues[0].propertyValue.value
 
-		if 'elementProperties' in zone and 'ZONESUM' in zone['elementProperties']:
-			zone_prop = zone['elementProperties']['ZONESUM']
-			category = zone_prop['Кат  Пом ']
-			apt_id = zone_prop['Номер квартиры']
-			apt_type = zone_prop['Тип Квартиры']
+		if 'elementProperties' in zone and 'Параметри по будинку' in zone['elementProperties']:
+			zone_prop = zone['elementProperties']['Параметри по будинку']
+			div = zone_prop['Розміщення відносно р з ']
+			part = zone_prop['Віднесення до секції']
+			category = zone_prop['Категорія']
+			mod = zone_prop['Коефіцієнт']
 
 		zone['type'] = 'Room'
 		zone['category'] = 'Rooms'
@@ -557,6 +560,34 @@ class TranslatorArchicad2Revit(Translator):
 		zone['parameters'] = {}
 		zone['parameters']['speckle_type'] = 'Base'
 		zone['parameters']['applicationId'] = None
+
+		zone['parameters']['a8ea7f3f-749f-4ff6-a9a1-a8a6dab6f085'] = {
+			'name': 'PTB_Division',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': 'a8ea7f3f-749f-4ff6-a9a1-a8a6dab6f085',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': div
+		}
+
+		zone['parameters']['da5873dd-45b6-4402-875e-3b0443eb71f2'] = {
+			'name': 'PTB_BuildingPart',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': 'da5873dd-45b6-4402-875e-3b0443eb71f2',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': part
+		}
 
 		zone['parameters']['ALL_MODEL_INSTANCE_COMMENTS'] = {
 			'name': 'Comments',
@@ -583,7 +614,7 @@ class TranslatorArchicad2Revit(Translator):
 			'isShared': True,
 			'isTypeParameter': False,
 			'units': None,
-			'value': apt_id
+			'value': zone['number']
 		}
 
 		zone['parameters']['2aaea987-7ae4-4484-8062-fbd77fc0bfbd'] = {
@@ -612,6 +643,20 @@ class TranslatorArchicad2Revit(Translator):
 			'isTypeParameter': False,
 			'units': 'm²',
 			'value': area
+		}
+
+		zone['parameters']['75894bf8-8997-40ee-9130-d3dd46b1e109'] = {
+			'name': 'PTB_A_RoomMod',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '75894bf8-8997-40ee-9130-d3dd46b1e109',
+			'applicationUnit': 'autodesk.unit.unit:general-1.0.1',
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': mod
 		}
 
 		for segment in zone['outline']['segments']:
