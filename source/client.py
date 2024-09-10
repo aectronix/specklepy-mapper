@@ -3,9 +3,6 @@ import logging
 import requests
 import time
 
-from gql import gql
-from gql.transport.requests import log as gql_logger
-
 from specklepy.api.client import SpeckleClient
 from specklepy.api.credentials import get_default_account
 from specklepy.api import operations
@@ -16,12 +13,13 @@ class SpeckleWrapper():
 
 	def __init__(self, host="https://app.speckle.systems"):
 
+		logger = logging.getLogger('speckle.client')
+		self.log = logger
+		self.log.setLevel(logging.WARNING)
 		self.host = host
 		self.client = None
 		self.token = None
 		self.transport = None
-
-		gql_logger.setLevel(logging.WARNING)
 
 		self.connect();
 
@@ -34,7 +32,7 @@ class SpeckleWrapper():
 			if account and client:
 				self.token = account.token
 				self.client = client
-				print(f'Connected to Speckle: {client}')
+				self.log.warning(f'Connected with credentials: $y({client.user.account.userInfo})')
 		except Exception as e:
 			raise e
 

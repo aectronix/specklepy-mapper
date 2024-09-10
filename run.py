@@ -3,23 +3,12 @@ import time
 
 from source import *
 
-ts = time.time()
-
-cmd = argparse.ArgumentParser()
-cmd.add_argument('-p', '--port', required=False, help='archicad port')
-cmd.add_argument('-t', '--translator', required=False, help='translator scheme')
-arg = cmd.parse_args()
-
-# worker = Worker()
-# worker.wrap('archicad')
-# worker.translate()
-
 class App():
 
 	def __init__(self, services: list):
 
 		for service in services:
-			self.wrap(service)	
+			self.wrap(service)
 
 	def wrap(self, service, *args, **kwargs):
 
@@ -49,11 +38,20 @@ class App():
 
 
 		# self.speckle.publish(speckle_object, 'test', 'levels 2')
+if __name__ == "__main__":
 
-log = LogWrapper()
-app = App(['speckle'])
-app.translate('Archicad2Revit')
+	ts = time.time()
+
+	cmd = argparse.ArgumentParser()
+	cmd.add_argument('-p', '--port', required=False, help='archicad port')
+	cmd.add_argument('-t', '--translator', required=False, help='translator scheme')
+	arg = cmd.parse_args()
+
+	log = LogWrapper('App')
+	log.log.info('Initialize')
+	app = App(['speckle'])
+
+	app.translate('Archicad2Revit')
 
 
-
-print(f'\n{round(time.time() - ts, 2)} sec')
+	print(f'\n{round(time.time() - ts, 2)} sec')
