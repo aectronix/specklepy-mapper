@@ -4,10 +4,19 @@ import re
 
 class LogWrapper():
 
-    def __init__(self, name=None):
+    _configured = False
 
+    @classmethod
+    def get_logger(cls, name):
+        if not cls._configured:
+            cls._setup()
+            cls._configured = True
+        return logging.getLogger(name)
+
+    @classmethod
+    def _setup(cls):
         colorama.init(autoreset=True)
-        formatter = self.LogFormatter('%(asctime)s.%(msecs)s %(levelname)s %(name)s: %(message)s', datefmt='%H:%M:%S')
+        formatter = cls.LogFormatter('%(asctime)s.%(msecs)s %(levelname)s %(name)s: %(message)s', datefmt='%H:%M:%S')
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
 
@@ -17,10 +26,10 @@ class LogWrapper():
         )
 
         log = logging.getLogger('log')
+        log.setLevel(logging.INFO)
         log.info(f'Logging service started')
 
     class LogFormatter(logging.Formatter):
-
         colors = {
             'b': colorama.Fore.BLUE,
             'c': colorama.Fore.CYAN,
@@ -34,6 +43,7 @@ class LogWrapper():
         levels = {
             'DEBUG': colors['g'],
             'INFO': colors['c'],
+            'PROC': colors['c'],
             'WARNING': colors['y'],
             'ERROR': colors['r'],
             'CRITICAL': colors['r']

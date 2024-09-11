@@ -8,26 +8,25 @@ from specklepy.objects.base import Base
 from specklepy.objects.other import Collection
 from specklepy.serialization.base_object_serializer import BaseObjectSerializer
 
+from .logging import LogWrapper
+
 class TranslatorFactory:
 
 	@staticmethod
 	def get(translator, client, speckle_object=None, wrapper=None):
-
 		translators = {
 			'Archicad2Revit': TranslatorArchicad2Revit
 		}
-
 		return translators[translator](client, speckle_object, wrapper)
 
 class Translator(ABC):
 
 	def __init__(self, client, speckle_object=None, wrapper=None):
-
+		self.log = None
 		self.object = speckle_object
 		self.wrapper = wrapper
 
 	def add_collection(self, name, typename, **parameters):
-
 		bos = BaseObjectSerializer()
 
 		collection = bos.traverse_base(Collection())[1]
@@ -60,7 +59,7 @@ class Translator(ABC):
 class TranslatorArchicad2Revit(Translator):
 
 	def __init__(self, client, speckle_object=None, wrapper=None):
-
+		self.log = LogWrapper.get_logger('app.translator.a2r')
 		self.client = client
 		self.object = speckle_object
 		self.wrapper = wrapper
@@ -68,6 +67,24 @@ class TranslatorArchicad2Revit(Translator):
 		self.source = 'archicad'
 		self.target = 'revit'
 		self.schema = self.get_schema('remap_archicad2revit')
+
+		self.prepare()
+
+	def prepare(self, **parameters):
+		"""
+		Pre-actions before the main translation process. Could be empty.
+		"""
+		# prepare the level structure before (!) the execution of remapping process
+		# seems to be more stable to assign objects onto the existing levels
+		levels = self.add_collection('Levels', 'Levels Type')
+		self.object['@levels'] = levels
+		for i in range(-10, 20):
+			story = self.get_level(projectId='aeb487f0e6', objectId='24a2a23229c145db99f5782ce70f1661', idx=i)
+			if story:
+				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+				level = self.map_level(story)
+				self.object['@levels']['elements'].append(level)
+
 
 	def get_level(self, **parameters):
 		"""
@@ -116,7 +133,6 @@ class TranslatorArchicad2Revit(Translator):
 		return result[0]['data']['level'] if result else None
 
 	def map_level(self, story, **parameters):
-
 		bos = BaseObjectSerializer()
 
 		level = bos.read_json(json.dumps (self.schema['revit']['level'], indent = 4))

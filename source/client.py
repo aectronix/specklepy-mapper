@@ -3,7 +3,7 @@ import logging
 import requests
 import time
 
-from gql.transport.requests import log as gql_log
+from gql.transport.requests import log as gql_logger
 
 from specklepy.api.client import SpeckleClient
 from specklepy.api.credentials import get_default_account
@@ -11,14 +11,14 @@ from specklepy.api import operations
 from specklepy.transports.server import ServerTransport
 from specklepy.serialization.base_object_serializer import BaseObjectSerializer
 
-LOG = logging.getLogger('speckle.client')
+from .logging import LogWrapper
 
 class SpeckleWrapper():
 
 	def __init__(self, host="https://app.speckle.systems"):
 
-		gql_log.setLevel(logging.WARNING)
-		LOG.setLevel(logging.INFO)
+		self.log = LogWrapper.get_logger('speckle.client')
+		gql_logger.setLevel(self.log.getEffectiveLevel()+10) # skip requests body
 
 		self.host = host
 		self.client = None
@@ -36,13 +36,13 @@ class SpeckleWrapper():
 			if account and client:
 				self.token = account.token
 				self.client = client
-				LOG.info(f'Connected with credentials: $y({client.user.account.userInfo})')
+				self.log.info(f'Connected with credentials: $y({client.user.account.userInfo})')
 		except Exception as e:
 			raise e
 
 	def retrieve(self, streamId, commitId):
 
-		LOG.info(f'Receiving referencedObject, streamId: $y({streamId}), commitId: $y({commitId})')
+		self.log.info(f'Receiving referencedObject, streamId: $y("{streamId}"), commitId: $y("{commitId}")')
 		commit = self.client.commit.get(streamId, commitId)
 		transport = ServerTransport(client=self.client, stream_id=streamId)
 		if transport:
@@ -53,7 +53,7 @@ class SpeckleWrapper():
 
 	def publish(self, obj, branch, message, retries=10, delay=3):
 
-		LOG.info(f'Publishing commit, branch: $y({branch}), message: $y({message})...')
+		self.log.info(f'Publishing commit, branch: $y("{branch}"), message: $y("{message}")...')
 		bos = BaseObjectSerializer()
 		base = obj
 
@@ -66,10 +66,10 @@ class SpeckleWrapper():
 				    branch_name = branch,
 				    message = message
 				)
-				LOG.info(f'Published successfully')
+				self.log.info(f'Published successfully')
 				return commit
 			except Exception as e:
-				LOG.error(f'Attempt {attempt + 1} failed: {e}')
+				self.log.error(f'Attempt $m({attempt + 1}) failed: {e}')
 				if attempt < retries - 1:
 					time.sleep(delay)
 				else:
