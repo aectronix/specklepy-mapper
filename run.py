@@ -1,7 +1,12 @@
 import argparse
+from datetime import datetime
+import logging
 import time
 
 from source import *
+
+LOG = logging.getLogger('app')
+LOG.setLevel(logging.INFO)
 
 class App():
 
@@ -32,12 +37,13 @@ class App():
 		for i in range(-10, 20):
 			story = a2r.get_level(projectId='aeb487f0e6', objectId='24a2a23229c145db99f5782ce70f1661', idx=i)
 			if story:
-				print (f'found level {story['index']} {story['name']}')
+				LOG.info(f'found level {story['index']} {story['name']}')
 				level = a2r.map_level(story)
 				speckle_object['@levels']['elements'].append(level)
 
 
-		# self.speckle.publish(speckle_object, 'test', 'levels 2')
+		# self.speckle.publish(speckle_object, 'test', 'levels 2b')
+
 if __name__ == "__main__":
 
 	ts = time.time()
@@ -47,10 +53,8 @@ if __name__ == "__main__":
 	cmd.add_argument('-t', '--translator', required=False, help='translator scheme')
 	arg = cmd.parse_args()
 
-	log = LogWrapper('App')
-	log.log.info('Initialize')
-	app = App(['speckle'])
-
+	print (f'{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} initializing...')
+	app = App(['log', 'speckle'])
 	app.translate('Archicad2Revit')
 
 

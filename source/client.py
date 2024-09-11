@@ -3,19 +3,23 @@ import logging
 import requests
 import time
 
+from gql.transport.requests import log as gql_log
+
 from specklepy.api.client import SpeckleClient
 from specklepy.api.credentials import get_default_account
 from specklepy.api import operations
 from specklepy.transports.server import ServerTransport
 from specklepy.serialization.base_object_serializer import BaseObjectSerializer
 
+LOG = logging.getLogger('speckle.client')
+
 class SpeckleWrapper():
 
 	def __init__(self, host="https://app.speckle.systems"):
 
-		logger = logging.getLogger('speckle.client')
-		self.log = logger
-		self.log.setLevel(logging.WARNING)
+		gql_log.setLevel(logging.WARNING)
+		LOG.setLevel(logging.INFO)
+
 		self.host = host
 		self.client = None
 		self.token = None
@@ -32,12 +36,13 @@ class SpeckleWrapper():
 			if account and client:
 				self.token = account.token
 				self.client = client
-				self.log.warning(f'Connected with credentials: $y({client.user.account.userInfo})')
+				LOG.info(f'Connected with credentials: $y({client.user.account.userInfo})')
 		except Exception as e:
 			raise e
 
 	def retrieve(self, streamId, commitId):
 
+		LOG.info(f'Receiving referencedObject, streamId: $y({streamId}), commitId: $y({commitId})')
 		commit = self.client.commit.get(streamId, commitId)
 		transport = ServerTransport(client=self.client, stream_id=streamId)
 		if transport:
@@ -48,6 +53,7 @@ class SpeckleWrapper():
 
 	def publish(self, obj, branch, message, retries=10, delay=3):
 
+		LOG.info(f'Publishing commit, branch: $y({branch}), message: $y({message})...')
 		bos = BaseObjectSerializer()
 		base = obj
 
@@ -60,10 +66,10 @@ class SpeckleWrapper():
 				    branch_name = branch,
 				    message = message
 				)
-				print (f'"{message}" has been published')
+				LOG.info(f'Published successfully')
 				return commit
 			except Exception as e:
-				print(f'Attempt {attempt + 1} failed: {e}')
+				LOG.error(f'Attempt {attempt + 1} failed: {e}')
 				if attempt < retries - 1:
 					time.sleep(delay)
 				else:

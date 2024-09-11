@@ -16,10 +16,8 @@ class LogWrapper():
             handlers = [handler]
         )
 
-        self.log = logging.getLogger(name) if name else logging.getLogger(__name__)
-
-
-        # self.log.info('Testing $y(qwerty) method and $r(trololo) function')
+        log = logging.getLogger('log')
+        log.info(f'Logging service started')
 
     class LogFormatter(logging.Formatter):
 
