@@ -13,16 +13,17 @@ from .logging import LogWrapper
 class TranslatorFactory:
 
 	@staticmethod
-	def get(translator, client, speckle_object=None, wrapper=None):
+	def get(translator, client, speckle_object=None, wrapper=None, **parameters):
 		translators = {
 			'Archicad2Revit': TranslatorArchicad2Revit,
 		}
-		return translators[translator](client, speckle_object, wrapper)
+		return translators[translator](client, speckle_object, wrapper, **parameters)
 
 class Translator(ABC):
 
-	def __init__(self, client, speckle_object=None, wrapper=None):
+	def __init__(self, client, speckle_object=None, wrapper=None, **parameters):
 		self.log = None
+		self.client = client
 		self.object = speckle_object
 		self.wrapper = wrapper
 
@@ -44,13 +45,6 @@ class Translator(ABC):
 			schema = json.load(file)
 		if schema:
 			return schema
-
-	def get_stats(self):
-		"""
-		Retrieves object count by types.
-		"""
-		result = ', '.join([f'{e.name}: $m({len(e.elements)})' for e in self.object['elements']])
-		return result
 
 	@abstractmethod
 	def map(self):
@@ -76,7 +70,7 @@ class Translator(ABC):
 
 class TranslatorArchicad2Revit(Translator):
 
-	def __init__(self, client, speckle_object=None, wrapper=None):
+	def __init__(self, client, speckle_object=None, wrapper=None, **parameters):
 		self.log = LogWrapper.get_logger('app.translator.a2r')
 		self.client = client
 		self.object = speckle_object
@@ -84,43 +78,15 @@ class TranslatorArchicad2Revit(Translator):
 
 		self.source = 'archicad'
 		self.target = 'revit'
-		self.schema = self.get_schema('remap_archicad2revit')[self.target]
+		self.schema = self.get_schema('remap_archicad2revit')
+		self.categories = self.get_filtered_categories(parameters)
 
-	def map(self):
-		self.log.info(self.get_stats())
-
-		# prepare the level structure before (!) the execution of remapping process
-		# seems to be more stable to assign objects onto the existing levels
-		levels = self.add_collection('Levels', 'Levels Type')
-		self.object['@levels'] = levels
-		for i in range(-10, 20):
-			story = self.get_story_data(projectId='aeb487f0e6', objectId='0bb2effa506bd508d3ae0f5dce632044', idx=i)
-			if story:
-				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-				level = self.map_story(story)
-				self.object['@levels']['elements'].append(level)
-
-		# iterate
-		for collection in self.object['elements']:
-			category = collection.name.lower()
-			mapper = getattr(self, 'map_' + category)
-			for i in range(0, len(collection['elements'])):
-				collection['elements'][i] = mapper(
-					speckle_object = collection['elements'][i]
-				)
-
-	def get_material_body(self, speckle_object):
+	def get_filtered_categories(self, parameters):
 		"""
-		Retrieves the "body" of the given object, regarding it's structure.
-		Could be the name of object building material, composite or profile.
+		Retrieves category names that were specified manually. Otherwise, keep the full list.
 		"""
-		structure = {
-		    'Basic': f'{speckle_object.get('buildingMaterialName')}',
-		    'Composite': f'{speckle_object.get('compositeName')}',
-		    'Profile': f'{speckle_object.get('profileName')}'
-		}
-		body = f'{structure[speckle_object['structure']]} ({speckle_object.get('thickness')}{speckle_object.get('units')})'
-		return body if body else None
+		categories = parameters.get('categories', [key for key, value in self.schema['archicad'].items()])
+		return categories
 
 	def get_element_properties(self, speckle_object):
 		"""
@@ -144,52 +110,53 @@ class TranslatorArchicad2Revit(Translator):
 				self.log.warning(f'No parameters found for {speckle_object['elementType']}: $m({speckle_object['id']})')
 		return None
 
-	def get_story_data(self, **parameters):
+	def get_material_body(self, speckle_object):
 		"""
-		Hope this is temporary solution and we'll be able to fetch levels from info section.
+		Retrieves the "body" of the given object, regarding it's structure.
+		Could be the name of object building material, composite or profile.
 		"""
-		query = """
-			query Object($objectId: String!, $projectId: String!, $query: [JSONObject!], $select: [String], $orderBy: JSONObject, $depth: Int!, $limit: Int!) {
-			  project(id: $projectId) {
-			    object(id: $objectId) {
-			      children(query: $query, select: $select, orderBy: $orderBy, depth: $depth, limit: $limit) {
-			        totalCount
-			        objects {
-			          data
-			        }
-			      }
-			    }
-			  }
-			}
-		"""
-		variables = {
-			"projectId": parameters['projectId'],
-			"objectId": parameters['objectId'],
-			"query": [
-				{
-				  "field": "level.index",
-				  "value": parameters['idx'],
-				  "operator": "="
-				}
-			],
-			"select": [
-				"level.id",
-				"level.name",
-				"level.index",
-				"level.elevation"
-			],
-			"orderBy": {
-				"field": "level.index"
-			},
-			"depth": 3,
-			"limit": 1
+		structure = {
+		    'Basic': f'{speckle_object.get('buildingMaterialName')}',
+		    'Composite': f'{speckle_object.get('compositeName')}',
+		    'Profile': f'{speckle_object.get('profileName')}'
 		}
+		body = f'{structure[speckle_object['structure']]} ({speckle_object.get('thickness')}{speckle_object.get('units')})'
+		return body if body else None
 
-		response = self.client.query(query, variables)
-		result = response['data']['project']['object']['children']['objects']
+	def log_stats(self):
+		"""
+		Display some stats info
+		"""
+		total = self.client.query('get_total_count', 'aeb487f0e6', self.object.id, None)
+		self.log.info(f'Commit object entities: $m({total})')
+		for category in self.categories:
+			count = self.client.query('get_total_count', 'aeb487f0e6', self.object.id, self.schema['archicad'][category]['speckle_type'])
+			self.log.info(f'Total {category} objects: $m({count})')
 
-		return result[0]['data']['level'] if result else None
+	def map(self):
+		self.log_stats()
+		# prepare the level structure before (!) the execution of remapping process
+		# seems to be more stable to assign objects onto the existing levels
+		levels = self.add_collection('Levels', 'Levels Type')
+		self.object['@levels'] = levels
+		for i in range(-10, 20):
+			story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
+			if story:
+				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+				level = self.map_story(story)
+				self.object['@levels']['elements'].append(level)
 
+		# iterate
+		for collection in self.object['elements']:
+			category = collection.name.lower()
+			if category in self.categories:
+				mapper = getattr(self, 'map_' + category)
+				for i in range(0, len(collection['elements'])):
+					collection['elements'][i] = mapper(
+						speckle_object = collection['elements'][i]
+					)
+			else:
+				self.log.warning(f'Translation skipped for category: $y("{collection.name}")')
 
 	def map_beam(self, speckle_object, **parameters):
 		
@@ -221,7 +188,7 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
-		floor = self.override_schema(slab, self.schema['floor'], overrides)
+		floor = self.override_schema(slab, self.schema['revit']['floor'], overrides)
 		return bos.recompose_base(floor)
 
 	def map_story(self, story, **parameters):
@@ -230,7 +197,7 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		bos = BaseObjectSerializer()
 
-		level = bos.read_json(json.dumps (self.schema['level'], indent = 4))
+		level = bos.read_json(json.dumps (self.schema['revit']['level'], indent = 4))
 		level.id = story['id']
 		level.name = story.get('name', f"{story['index']} level on {story['elevation'] * 1000}")
 		level.index = story['index']

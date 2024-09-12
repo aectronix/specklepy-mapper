@@ -1,4 +1,21 @@
 {
+	"archicad": {
+		"beam": {
+			"speckle_type": "Objects.BuiltElements.Beam:Objects.BuiltElements.Archicad.ArchicadBeam"
+		},
+		"column": {
+			"speckle_type": "Objects.BuiltElements.Column:Objects.BuiltElements.Archicad.ArchicadColumn"
+		},
+		"opening": {
+			"speckle_type": "Objects.BuiltElements.Opening:Objects.BuiltElements.Archicad.ArchicadOpening"
+		},
+		"slab": {
+			"speckle_type": "Objects.BuiltElements.Floor:Objects.BuiltElements.Archicad.ArchicadFloor"
+		},
+		"wall": {
+			"speckle_type": "Objects.BuiltElements.Wall:Objects.BuiltElements.Archicad.ArchicadWall"
+		}
+	},
 	"revit": {
 		"floor": {
 			"category": "Floors",

@@ -26,7 +26,7 @@ class LogWrapper():
         )
 
         log = logging.getLogger('log')
-        log.setLevel(logging.INFO)
+        # log.setLevel(logging.INFO)
         log.info(f'Logging service started')
 
     class LogFormatter(logging.Formatter):

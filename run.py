@@ -30,7 +30,7 @@ class App():
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'test', 'model 0 exp')
+		self.speckle.publish(speckle_object, 'test', 'model 0b exp')
 
 if __name__ == "__main__":
 

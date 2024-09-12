@@ -24,6 +24,7 @@ class SpeckleWrapper():
 		self.client = None
 		self.token = None
 		self.transport = None
+		self.gql = None
 
 		self.connect();
 
@@ -36,6 +37,7 @@ class SpeckleWrapper():
 			if account and client:
 				self.token = account.token
 				self.client = client
+				self.gql = SpeckleGQL(self.host, self.token)
 				self.log.info(f'Connected with credentials: $y({client.user.account.userInfo})')
 		except Exception as e:
 			raise e
@@ -75,7 +77,21 @@ class SpeckleWrapper():
 				else:
 					raise
 
-	def query(self, query, variables):
+	def query(self, query, *args):
+		method = getattr(self.gql, query, None)
+		if callable(method):
+			return method(*args)
+		else:
+			self.log.error(f'Could not call such query: $y("{query}")')
+
+class SpeckleGQL():
+
+	def __init__(self, host, token):
+		self.host = host
+		self.token = token
+		self.log = LogWrapper.get_logger('speckle.client.gql')
+
+	def execute(self, query, variables):
 	    """
 	    Sends a GraphQL query to the Speckle server and returns the response.
 
@@ -92,3 +108,81 @@ class SpeckleWrapper():
 
 	    response = requests.post(url, json=payload, headers=headers)
 	    return response.json() if response.status_code == 200 else None
+
+	def get_total_count(self, projectId, objectId, speckle_type):
+		operator = '!=' if speckle_type == None else '='
+		query = """
+			query Object($objectId: String!, $projectId: String!, $query: [JSONObject!], $select: [String], $orderBy: JSONObject) {
+			  project(id: $projectId) {
+			    object(id: $objectId) {
+			      children(query: $query, select: $select, orderBy: $orderBy) {
+			        totalCount
+			      }
+			    }
+			  }
+			}
+		"""
+		variables = {
+			"projectId": projectId,
+			"objectId": objectId,
+			"query": [
+				{
+				  "field": "speckle_type",
+				  "value": speckle_type,
+				  "operator": operator
+				}
+			],
+			"select": [
+				"speckle_type"
+			]
+		}
+
+		response = self.execute(query, variables)
+		result = response['data']['project']['object']['children']['totalCount']
+		return result
+
+	def get_level_data(self, projectId, objectId, idx):
+		"""
+		Hope this is temporary solution and we'll be able to fetch levels from info section.
+		"""
+		query = """
+			query Object($objectId: String!, $projectId: String!, $query: [JSONObject!], $select: [String], $orderBy: JSONObject, $depth: Int!, $limit: Int!) {
+			  project(id: $projectId) {
+			    object(id: $objectId) {
+			      children(query: $query, select: $select, orderBy: $orderBy, depth: $depth, limit: $limit) {
+			        totalCount
+			        objects {
+			          data
+			        }
+			      }
+			    }
+			  }
+			}
+		"""
+		variables = {
+			"projectId": projectId,
+			"objectId": objectId,
+			"query": [
+				{
+				  "field": "level.index",
+				  "value": idx,
+				  "operator": "="
+				}
+			],
+			"select": [
+				"level.id",
+				"level.name",
+				"level.index",
+				"level.elevation"
+			],
+			"orderBy": {
+				"field": "level.index"
+			},
+			"depth": 3,
+			"limit": 1
+		}
+
+		response = self.execute(query, variables)
+		result = response['data']['project']['object']['children']['objects']
+
+		return result[0]['data']['level'] if result else None
