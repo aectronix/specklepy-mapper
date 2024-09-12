@@ -30,7 +30,7 @@ class App():
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'test', 'model 0b exp')
+		# self.speckle.publish(speckle_object, 'test', 'model 0b exp')
 
 if __name__ == "__main__":
 
@@ -45,5 +45,4 @@ if __name__ == "__main__":
 	app = App(['speckle'])
 	app.translate('Archicad2Revit')
 
-
-	print(f'\n{round(time.time() - ts, 2)} sec')
+	print (f'{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} completed in {round(time.time() - ts, 2)} sec')

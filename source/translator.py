@@ -167,6 +167,25 @@ class TranslatorArchicad2Revit(Translator):
 		
 		return speckle_object
 
+	def map_opening(self, speckle_object, **parameters):
+		"""
+		Remap opening > shaft
+		"""
+		def map_opening_horizontal(speckle_object, **parameters):
+			""" shaft openings in slabs, roofs, meshes? """
+			# print (speckle_object['elementType'])
+			pass
+
+		def map_opening_vertical(speckle_object, **parameters):
+			""" shaft openings in walls """
+			# print (speckle_object['elementType'])
+			pass
+
+		if parameters['host'] == 'slab' or parameters['host'] == 'roof':
+			map_opening_horizontal(speckle_object, **parameters)
+		elif parameters['host'] == 'wall':
+			map_opening_vertical(speckle_object, **parameters)
+
 	def map_slab(self, speckle_object, **parameters):
 		"""
 		Remap slab > floor schema.
@@ -187,8 +206,18 @@ class TranslatorArchicad2Revit(Translator):
 				}
 			}
 		}
-
 		floor = self.override_schema(slab, self.schema['revit']['floor'], overrides)
+
+		elements = slab.get('elements', None)
+		if elements:
+			for e in range (0, len(slab['elements'])):
+				element = slab['elements'][e]
+				if element['elementType'].lower() in self.categories:
+					self.map_opening(
+						speckle_object = slab['elements'][e],
+						host = slab['elementType'].lower()
+					)
+
 		return bos.recompose_base(floor)
 
 	def map_story(self, story, **parameters):
