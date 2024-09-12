@@ -1,5 +1,30 @@
 {
 	"revit": {
+		"floor": {
+			"category": "Floors",
+			"builtInCategory": "OST_Floors",
+			"speckle_type": "Objects.BuiltElements.Floor:Objects.BuiltElements.Revit.RevitFloor",
+			"familiy": "Floor",
+			"type": null,
+			"TopElevationToHomeStory": 0,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"FLOOR_HEIGHTABOVELEVEL_PARAM": {
+					"name": "Height Offset From Level",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "FLOOR_HEIGHTABOVELEVEL_PARAM",
+					"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": "m",
+					"value": 0
+				}
+			}
+		},
 		"level": {
 			"category": "Levels",
 			"builtInCategory": "OST_Levels",

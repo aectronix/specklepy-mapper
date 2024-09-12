@@ -42,7 +42,7 @@ class SpeckleWrapper():
 
 	def retrieve(self, streamId, commitId):
 
-		self.log.info(f'Receiving referencedObject, streamId: $y("{streamId}"), commitId: $y("{commitId}")')
+		self.log.info(f'Receiving referencedObject, streamId: $m({streamId}), commitId: $m({commitId})')
 		commit = self.client.commit.get(streamId, commitId)
 		transport = ServerTransport(client=self.client, stream_id=streamId)
 		if transport:

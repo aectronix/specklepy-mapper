@@ -44,8 +44,14 @@ class Translator(ABC):
 		if schema:
 			return schema
 
-	@staticmethod
-	def map_by_schema(entity, schema, parameters):
+	def get_stats(self):
+		result = ', '.join([f'{e.name}: $m({len(e.elements)})' for e in self.object['elements']])
+		return result
+
+	def remap(self):
+		pass
+
+	def map_by_schema(self, entity, schema, parameters):
 		for key, value in schema.items():
 			if not isinstance(value, dict):
 				entity[key] = parameters[key] if key in parameters else value
@@ -68,8 +74,6 @@ class TranslatorArchicad2Revit(Translator):
 		self.target = 'revit'
 		self.schema = self.get_schema('remap_archicad2revit')
 
-		self.prepare()
-
 	def prepare(self, **parameters):
 		"""
 		Pre-actions before the main translation process. Could be empty.
@@ -79,14 +83,40 @@ class TranslatorArchicad2Revit(Translator):
 		levels = self.add_collection('Levels', 'Levels Type')
 		self.object['@levels'] = levels
 		for i in range(-10, 20):
-			story = self.get_level(projectId='aeb487f0e6', objectId='24a2a23229c145db99f5782ce70f1661', idx=i)
+			story = self.get_story(projectId='aeb487f0e6', objectId='24a2a23229c145db99f5782ce70f1661', idx=i)
 			if story:
 				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-				level = self.map_level(story)
+				level = self.map_story(story)
 				self.object['@levels']['elements'].append(level)
 
 
-	def get_level(self, **parameters):
+	def remap(self):
+		for collection in self.object['elements']:
+			category = collection.name.lower()
+			mapper = getattr(self, 'map_' + category)
+			# for e in collection['elements']:
+			for i in range(0, len(collection['elements'])):
+				collection['elements'][i] = mapper(
+					speckle_object = collection['elements'][i]
+				)
+
+	def get_element_properties(self, speckle_object):
+		if 'elementProperties' in speckle_object:
+			return speckle_object['elementProperties']
+		else:
+			self.log.warning(f'No properties found for {speckle_object['elementType']}: $m({speckle_object['id']})')
+		return None
+
+	def get_general_parameters(self, speckle_object):
+		properties = self.get_element_properties(speckle_object)
+		if properties:
+			if 'General Parameters' in properties:
+				return properties['General Parameters']
+			else:
+				self.log.warning(f'No parameters found for {speckle_object['elementType']}: $m({speckle_object['id']})')
+		return None
+
+	def get_story(self, **parameters):
 		"""
 		Hope this is temporary solution and we'll be able to fetch levels from info section.
 		"""
@@ -132,7 +162,44 @@ class TranslatorArchicad2Revit(Translator):
 
 		return result[0]['data']['level'] if result else None
 
-	def map_level(self, story, **parameters):
+
+	def map_beam(self, speckle_object, **parameters):
+		
+		return speckle_object
+
+
+	def map_column(self, speckle_object, **parameters):
+		
+		return speckle_object
+
+	def map_slab(self, speckle_object, **parameters):
+		"""
+		Remap slab > floor schema.
+		"""
+		bos = BaseObjectSerializer()
+		slab = bos.traverse_base(speckle_object)[1]
+
+		parameters = self.get_general_parameters(slab)
+		# revit floor relies on top elevation to home
+		top_offset = parameters.get('Top Elevation To Home Story', 0)
+
+		redefines = {
+			'type': slab['structure'],
+			'TopElevationToHomeStory': top_offset,
+			'parameters': {
+				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
+					'value': top_offset
+				}
+			}
+		}
+
+		floor = self.map_by_schema(slab, self.schema['revit']['floor'], redefines)
+		return bos.recompose_base(floor)
+
+	def map_story(self, story, **parameters):
+		"""
+		Remap story > level schema
+		"""
 		bos = BaseObjectSerializer()
 
 		level = bos.read_json(json.dumps (self.schema['revit']['level'], indent = 4))
@@ -142,3 +209,7 @@ class TranslatorArchicad2Revit(Translator):
 		level.elevation = story['elevation']
 
 		return level
+
+	def map_wall(self, speckle_object, **parameters):
+		
+		return speckle_object
