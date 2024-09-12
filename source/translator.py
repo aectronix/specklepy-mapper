@@ -15,7 +15,7 @@ class TranslatorFactory:
 	@staticmethod
 	def get(translator, client, speckle_object=None, wrapper=None):
 		translators = {
-			'Archicad2Revit': TranslatorArchicad2Revit
+			'Archicad2Revit': TranslatorArchicad2Revit,
 		}
 		return translators[translator](client, speckle_object, wrapper)
 
@@ -28,16 +28,17 @@ class Translator(ABC):
 
 	def add_collection(self, name, typename, **parameters):
 		bos = BaseObjectSerializer()
-
 		collection = bos.traverse_base(Collection())[1]
 		collection['name'] = name
 		collection['collectionType'] = typename
 		collection['elements'] = []
-
 		return bos.recompose_base(collection)
 
 	@staticmethod
 	def get_schema(name):
+		"""
+		Loads translation schema.
+		"""
 		source = os.path.join(os.path.dirname(os.path.abspath(__file__)).replace('source', 'schemas'), name + '.json')
 		with open(source, 'r') as file:
 			schema = json.load(file)
@@ -45,13 +46,24 @@ class Translator(ABC):
 			return schema
 
 	def get_stats(self):
+		"""
+		Retrieves object count by types.
+		"""
 		result = ', '.join([f'{e.name}: $m({len(e.elements)})' for e in self.object['elements']])
 		return result
 
-	def remap(self):
+	@abstractmethod
+	def map(self):
+		"""
+		Process the commit object and run mapping procedure
+		"""
 		pass
 
-	def map_by_schema(self, entity, schema, parameters):
+	def override_schema(self, entity, schema, parameters):
+		"""
+		Replaces existing object structure my the specified parameters of the given schema.
+		Used to enable mapping options within the Revit environmnet while receving commits.
+		"""
 		for key, value in schema.items():
 			if not isinstance(value, dict):
 				entity[key] = parameters[key] if key in parameters else value
@@ -59,7 +71,7 @@ class Translator(ABC):
 				if not key in entity:
 					dummy = {} if isinstance(value, dict) else None
 					entity[key] = dummy
-				self.map_by_schema(entity[key], value, parameters[key])
+				self.override_schema(entity[key], value, parameters[key])
 		return entity
 
 class TranslatorArchicad2Revit(Translator):
@@ -72,35 +84,48 @@ class TranslatorArchicad2Revit(Translator):
 
 		self.source = 'archicad'
 		self.target = 'revit'
-		self.schema = self.get_schema('remap_archicad2revit')
+		self.schema = self.get_schema('remap_archicad2revit')[self.target]
 
-	def prepare(self, **parameters):
-		"""
-		Pre-actions before the main translation process. Could be empty.
-		"""
+	def map(self):
+		self.log.info(self.get_stats())
+
 		# prepare the level structure before (!) the execution of remapping process
 		# seems to be more stable to assign objects onto the existing levels
 		levels = self.add_collection('Levels', 'Levels Type')
 		self.object['@levels'] = levels
 		for i in range(-10, 20):
-			story = self.get_story(projectId='aeb487f0e6', objectId='24a2a23229c145db99f5782ce70f1661', idx=i)
+			story = self.get_story_data(projectId='aeb487f0e6', objectId='0bb2effa506bd508d3ae0f5dce632044', idx=i)
 			if story:
 				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
 				level = self.map_story(story)
 				self.object['@levels']['elements'].append(level)
 
-
-	def remap(self):
+		# iterate
 		for collection in self.object['elements']:
 			category = collection.name.lower()
 			mapper = getattr(self, 'map_' + category)
-			# for e in collection['elements']:
 			for i in range(0, len(collection['elements'])):
 				collection['elements'][i] = mapper(
 					speckle_object = collection['elements'][i]
 				)
 
+	def get_material_body(self, speckle_object):
+		"""
+		Retrieves the "body" of the given object, regarding it's structure.
+		Could be the name of object building material, composite or profile.
+		"""
+		structure = {
+		    'Basic': f'{speckle_object.get('buildingMaterialName')}',
+		    'Composite': f'{speckle_object.get('compositeName')}',
+		    'Profile': f'{speckle_object.get('profileName')}'
+		}
+		body = f'{structure[speckle_object['structure']]} ({speckle_object.get('thickness')}{speckle_object.get('units')})'
+		return body if body else None
+
 	def get_element_properties(self, speckle_object):
+		"""
+		Retrieves properties data for the given object.
+		"""
 		if 'elementProperties' in speckle_object:
 			return speckle_object['elementProperties']
 		else:
@@ -108,6 +133,9 @@ class TranslatorArchicad2Revit(Translator):
 		return None
 
 	def get_general_parameters(self, speckle_object):
+		"""
+		Retrieves tool-specific parameters (elevations, areas, volumes etc) for the given object.
+		"""
 		properties = self.get_element_properties(speckle_object)
 		if properties:
 			if 'General Parameters' in properties:
@@ -116,7 +144,7 @@ class TranslatorArchicad2Revit(Translator):
 				self.log.warning(f'No parameters found for {speckle_object['elementType']}: $m({speckle_object['id']})')
 		return None
 
-	def get_story(self, **parameters):
+	def get_story_data(self, **parameters):
 		"""
 		Hope this is temporary solution and we'll be able to fetch levels from info section.
 		"""
@@ -180,11 +208,11 @@ class TranslatorArchicad2Revit(Translator):
 		slab = bos.traverse_base(speckle_object)[1]
 
 		parameters = self.get_general_parameters(slab)
-		# revit floor relies on top elevation to home
-		top_offset = parameters.get('Top Elevation To Home Story', 0)
+		top_offset = parameters.get('Top Elevation To Home Story', 0) # revit uses top elevation
+		body = self.get_material_body(slab)
 
-		redefines = {
-			'type': slab['structure'],
+		overrides = {
+			'type': body,
 			'TopElevationToHomeStory': top_offset,
 			'parameters': {
 				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
@@ -193,7 +221,7 @@ class TranslatorArchicad2Revit(Translator):
 			}
 		}
 
-		floor = self.map_by_schema(slab, self.schema['revit']['floor'], redefines)
+		floor = self.override_schema(slab, self.schema['floor'], overrides)
 		return bos.recompose_base(floor)
 
 	def map_story(self, story, **parameters):
@@ -202,7 +230,7 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		bos = BaseObjectSerializer()
 
-		level = bos.read_json(json.dumps (self.schema['revit']['level'], indent = 4))
+		level = bos.read_json(json.dumps (self.schema['level'], indent = 4))
 		level.id = story['id']
 		level.name = story.get('name', f"{story['index']} level on {story['elevation'] * 1000}")
 		level.index = story['index']

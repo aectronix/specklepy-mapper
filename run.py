@@ -25,15 +25,12 @@ class App():
 			raise e
 
 	def translate(self, translator):
-		speckle_object = self.speckle.retrieve('aeb487f0e6', 'e9971b52f2')
+		speckle_object = self.speckle.retrieve('aeb487f0e6', 'd879d3c0e7')
 		a2r = TranslatorFactory.get(translator, client=self.speckle, speckle_object=speckle_object)
 
-		stats = a2r.get_stats()
-		self.log.info(stats)
+		a2r.map()
 
-		a2r.remap()
-
-		self.speckle.publish(speckle_object, 'test', 'levels 2d')
+		self.speckle.publish(speckle_object, 'test', 'model 0 exp')
 
 if __name__ == "__main__":
 
