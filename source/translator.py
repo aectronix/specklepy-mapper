@@ -46,6 +46,19 @@ class Translator(ABC):
 		if schema:
 			return schema
 
+	@staticmethod
+	def get_vector_direction(line):
+		# delta
+		dx = line['end']['x'] - line['start']['x']
+		dy = line['end']['y'] - line['start']['y']
+		# magnitude
+		vm = math.sqrt(dx**2 + dy**2)
+		# vector direction
+		vx = dx / vm
+		vy = dy / vm
+
+		return {'x': vx, 'y': vy}
+
 	@abstractmethod
 	def map(self):
 		"""
@@ -134,17 +147,17 @@ class TranslatorArchicad2Revit(Translator):
 			self.log.info(f'Total {category} objects: $m({count})')
 
 	def map(self):
-		self.log_stats()
-		# prepare the level structure before (!) the execution of remapping process
-		# seems to be more stable to assign objects onto the existing levels
-		levels = self.add_collection('Levels', 'Levels Type')
-		self.object['@levels'] = levels
-		for i in range(-10, 20):
-			story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
-			if story:
-				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-				level = self.map_story(story)
-				self.object['@levels']['elements'].append(level)
+		# self.log_stats()
+		# # prepare the level structure before (!) the execution of remapping process
+		# # seems to be more stable to assign objects onto the existing levels
+		# levels = self.add_collection('Levels', 'Levels Type')
+		# self.object['@levels'] = levels
+		# for i in range(-10, 20):
+		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
+		# 	if story:
+		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+		# 		level = self.map_story(story)
+		# 		self.object['@levels']['elements'].append(level)
 
 		# iterate
 		for collection in self.object['elements']:
@@ -235,5 +248,118 @@ class TranslatorArchicad2Revit(Translator):
 		return level
 
 	def map_wall(self, speckle_object, **parameters):
-		
-		return speckle_object
+		"""
+		Remap wall schema.
+		"""
+		bos = BaseObjectSerializer()
+		wall = bos.traverse_base(speckle_object)[1]
+
+		# ref line locations
+		baseline = {
+			'Center': 0,		# Wall Centerline
+			'Core Center': 1,	# Core Centerline
+			'Outside': 2,		# Finish Face: Exterior
+			'Inside': 3,		# Finish Face: Interior
+			'Core Outside': 4,	# Core Face: Exterior
+			'Core Inside': 5	# Core Face: Inside
+		}
+
+		# ref line coordinates
+		sx = wall['baseLine']['start']['x']
+		sy = wall['baseLine']['start']['y']
+		sz = wall['baseLine']['start']['z']
+		ex = wall['baseLine']['end']['x']
+		ey = wall['baseLine']['end']['y']
+
+		fix = wall['thickness'] / 2
+		out = wall['offsetFromOutside'] if wall['offsetFromOutside'] else 0
+
+		flip = -1 if wall['flipped'] == True else 1
+		direction = self.get_vector_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
+
+		off_x = (out - fix) * direction['y'] * flip * -1
+		off_y = (out - fix) * direction['x'] * flip
+
+		overrides = {
+			'type': str(wall['structure']),
+			# 'topLevel': top_level,
+			'topOffset': wall['topOffset'],
+			'parameters': {
+				'WALL_KEY_REF_PARAM': {
+					'value': baseline[wall['referenceLineLocation']]
+				}
+			},
+			'baseLine': {
+				'start': {'x': sx + off_x, 'y': sy + off_y},
+				'end': {'x': ex + off_x, 'y': ey  + off_y}
+			}
+		}
+
+		wall = self.override_schema(wall, self.schema['revit']['wall'], overrides)
+
+		# curved walls
+		if wall['arcAngle']:
+			d = wall['baseLine']['length']
+			r = d / (2 * math.sin(wall['arcAngle']/2))
+			# mx = (sx + ex)/2
+			# my = (sy + ey)/2
+
+			# a = r * math.cos(90-wall['arcAngle']/2)
+
+			wall['baseLine']['plane'] = {
+				'units': 'm',
+				'speckle_type': 'Objects.Geometry.Plane',
+				'xdir': {
+					'x': 1,
+					'y': 0,
+					'z': 0,
+					'units': 'm',
+					'speckle_type': 'Objects.Geometry.Vector'
+				},
+				'ydir': {
+					'x': 0,
+					'y': 1,
+					'z': 0,
+					'units': 'm',
+					'speckle_type': 'Objects.Geometry.Vector'
+				},
+				'normal': {
+					'x': 0,
+					'y': 0,
+					'z': 1,
+					'units': 'm',
+					'speckle_type': 'Objects.Geometry.Vector'
+				},
+				'origin': {
+					'x': 0,
+					'y': 0,
+					'z': 0,
+					'units': 'm',
+					'speckle_type': 'Objects.Geometry.Point'
+				}
+			}
+			# wall['baseLine']['radius'] = r
+			# wall['baseLine']['length'] = d
+
+			wall['baseLine']['startAngle'] = 0
+			wall['baseLine']['endAngle'] = 0
+
+			wall['baseLine']['startPoint'] = wall['baseLine']['start']
+			wall['baseLine']['endPoint'] = wall['baseLine']['end']
+			wall['baseLine']['midPoint'] = {
+				'x': mx,
+				'y': my,
+				'z': 0,
+				'units': 'm',
+				'speckle_type': 'Objects.Geometry.Point'
+			}
+
+			wall['baseLine']['angleRadians'] = wall['arcAngle']
+			wall['baseLine']['speckle_type'] = 'Objects.Geometry.Arc'
+
+			wall['startPoint'] = None
+			wall['endPoint'] = None
+
+		return bos.recompose_base(wall)
+
+		#todo: kurwatura!
