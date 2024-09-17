@@ -314,28 +314,16 @@ class TranslatorArchicad2Revit(Translator):
 			dx = (ex - sx)/2
 			dy = (ey - sy)/2
 
-			a = r * math.sin(math.pi/2-wall['arcAngle']/2) # perp of diff middle
+			h = r * math.sin(math.pi/2-wall['arcAngle']/2) # perp of diff middle
 			b = r * math.cos(math.pi/2-wall['arcAngle']/2) # base of diff middle
-			print (a)
+			da = math.atan(dy/dx)
 
-			# h = r * math.sin(math.pi/2-wall['arcAngle']/2)
-			# c = r * math.cos(math.pi/2-wall['arcAngle']/2)
+			q = math.atan((r-h)/b)
+			md = b / math.cos(q)
+			ma = da - q
 
-			# ca = math.pi/2 - math.atan(c/(r-h)) # 16
-			
-			# ma = math.atan(dy/dx)
-
-			# da = ma - ca
-			# print (da)
-
-			# b = math.atan(dy/dx)
-			# c = dx / math.cos(b)
-			# r = d / (2 * math.sin(wall['arcAngle']/2))
-			# print (r)
-			# r = c / math.cos(math.pi/2-wall['arcAngle']/2)
-			# print (r)
-
-			# a = r * math.cos(90-wall['arcAngle']/2)
+			mx = md * math.cos(ma)
+			my = md * math.sin(ma)
 
 			wall['baseLine']['plane'] = {
 				'units': 'm',
@@ -376,10 +364,14 @@ class TranslatorArchicad2Revit(Translator):
 			wall['baseLine']['endAngle'] = 0
 
 			wall['baseLine']['startPoint'] = wall['baseLine']['start']
+			wall['baseLine']['startPoint']['x'] = sx
+			wall['baseLine']['startPoint']['y'] = sy
 			wall['baseLine']['endPoint'] = wall['baseLine']['end']
+			wall['baseLine']['endPoint']['x'] = ex
+			wall['baseLine']['endPoint']['y'] = ey
 			wall['baseLine']['midPoint'] = {
-				'x': dx,
-				'y': dy,
+				'x': sx + mx,
+				'y': sy + my,
 				'z': 0,
 				'units': 'm',
 				'speckle_type': 'Objects.Geometry.Point'
