@@ -149,16 +149,16 @@ class TranslatorArchicad2Revit(Translator):
 
 	def map(self):
 		# self.log_stats()
-		# prepare the level structure before (!) the execution of remapping process
-		# seems to be more stable to assign objects onto the existing levels
-		levels = self.add_collection('Levels', 'Levels Type')
-		self.object['@levels'] = levels
-		for i in range(-10, 20):
-			story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
-			if story:
-				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-				level = self.map_story(story)
-				self.object['@levels']['elements'].append(level)
+		# # prepare the level structure before (!) the execution of remapping process
+		# # seems to be more stable to assign objects onto the existing levels
+		# levels = self.add_collection('Levels', 'Levels Type')
+		# self.object['@levels'] = levels
+		# for i in range(-10, 20):
+		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
+		# 	if story:
+		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+		# 		level = self.map_story(story)
+		# 		self.object['@levels']['elements'].append(level)
 
 		boundaries = self.add_collection('Room Separation Lines', 'Revit Category')
 		self.object['elements'].append(boundaries)
@@ -311,8 +311,29 @@ class TranslatorArchicad2Revit(Translator):
 		if wall['arcAngle']:
 			d = wall['baseLine']['length']
 			r = d / (2 * math.sin(wall['arcAngle']/2))
-			mx = (sx + ex)/2
-			my = (sy + ey)/2
+			dx = (ex - sx)/2
+			dy = (ey - sy)/2
+
+			a = r * math.sin(math.pi/2-wall['arcAngle']/2) # perp of diff middle
+			b = r * math.cos(math.pi/2-wall['arcAngle']/2) # base of diff middle
+			print (a)
+
+			# h = r * math.sin(math.pi/2-wall['arcAngle']/2)
+			# c = r * math.cos(math.pi/2-wall['arcAngle']/2)
+
+			# ca = math.pi/2 - math.atan(c/(r-h)) # 16
+			
+			# ma = math.atan(dy/dx)
+
+			# da = ma - ca
+			# print (da)
+
+			# b = math.atan(dy/dx)
+			# c = dx / math.cos(b)
+			# r = d / (2 * math.sin(wall['arcAngle']/2))
+			# print (r)
+			# r = c / math.cos(math.pi/2-wall['arcAngle']/2)
+			# print (r)
 
 			# a = r * math.cos(90-wall['arcAngle']/2)
 
@@ -357,8 +378,8 @@ class TranslatorArchicad2Revit(Translator):
 			wall['baseLine']['startPoint'] = wall['baseLine']['start']
 			wall['baseLine']['endPoint'] = wall['baseLine']['end']
 			wall['baseLine']['midPoint'] = {
-				'x': mx,
-				'y': my,
+				'x': dx,
+				'y': dy,
 				'z': 0,
 				'units': 'm',
 				'speckle_type': 'Objects.Geometry.Point'
