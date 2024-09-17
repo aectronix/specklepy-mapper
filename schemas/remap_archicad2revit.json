@@ -88,6 +88,12 @@
 					"y": null
 				}
 			}
+		},
+		"room": {
+			"category": "Rooms",
+			"builtInCategory": "OST_Rooms",
+			"speckle_type": "Objects.BuiltElements.Room",
+			"type": null
 		}
 	}
 }

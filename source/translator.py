@@ -28,12 +28,12 @@ class Translator(ABC):
 		self.wrapper = wrapper
 
 	def add_collection(self, name, typename, **parameters):
-		bos = BaseObjectSerializer()
-		collection = bos.traverse_base(Collection())[1]
-		collection['name'] = name
-		collection['collectionType'] = typename
-		collection['elements'] = []
-		return bos.recompose_base(collection)
+		collection = Collection()
+		collection.name = name
+		collection.collectionType = typename
+		collection.elements = []
+		collection.id = collection.get_id(decompose=True)
+		return collection
 
 	@staticmethod
 	def get_schema(name):
@@ -73,7 +73,7 @@ class Translator(ABC):
 		"""
 		for key, value in schema.items():
 			if not isinstance(value, dict):
-				entity[key] = parameters[key] if key in parameters else value
+				entity[key] = parameters[key] if parameters and key in parameters else value
 			else:
 				if not key in entity:
 					dummy = {} if isinstance(value, dict) else None
@@ -93,6 +93,7 @@ class TranslatorArchicad2Revit(Translator):
 		self.target = 'revit'
 		self.schema = self.get_schema('remap_archicad2revit')
 		self.categories = self.get_filtered_categories(parameters)
+		self.collections = {}
 
 	def get_filtered_categories(self, parameters):
 		"""
@@ -159,10 +160,18 @@ class TranslatorArchicad2Revit(Translator):
 		# 		level = self.map_story(story)
 		# 		self.object['@levels']['elements'].append(level)
 
+		boundaries = self.add_collection('Room Separation Lines', 'Revit Category')
+		self.object['elements'].append(boundaries)
+		# # register custom collections
+		self.collections['boundaries'] = len(self.object['elements'])-1
+
+
 		# iterate
 		for collection in self.object['elements']:
 			category = collection.name.lower()
-			if category in self.categories:
+			if collection.name == 'Room Separation Lines': # rewrite & add more
+				pass
+			elif category in self.categories:
 				mapper = getattr(self, 'map_' + category)
 				for i in range(0, len(collection['elements'])):
 					collection['elements'][i] = mapper(
@@ -301,8 +310,8 @@ class TranslatorArchicad2Revit(Translator):
 		if wall['arcAngle']:
 			d = wall['baseLine']['length']
 			r = d / (2 * math.sin(wall['arcAngle']/2))
-			# mx = (sx + ex)/2
-			# my = (sy + ey)/2
+			mx = (sx + ex)/2
+			my = (sy + ey)/2
 
 			# a = r * math.cos(90-wall['arcAngle']/2)
 
@@ -363,3 +372,37 @@ class TranslatorArchicad2Revit(Translator):
 		return bos.recompose_base(wall)
 
 		#todo: kurwatura!
+
+	def map_zone(self, speckle_object, **parameters):
+		"""
+		Remap zone > room schema.
+		"""
+		bos = BaseObjectSerializer()
+		zone = bos.traverse_base(speckle_object)[1]
+
+		zone['category'] = 'Rooms'
+		zone['builtInCategory'] = 'OST_Rooms'
+		zone['speckle_type'] = 'Objects.BuiltElements.Room'
+		zone['type'] = 'Room'
+
+		for segment in zone['outline']['segments']:
+			obs = BaseObjectSerializer()
+
+			boundary = obs.traverse_base(Base())[1]
+			boundary = {}
+			boundary['level'] = zone['level']
+			boundary['units'] = 'm'
+			boundary['baseCurve'] = segment
+			boundary['speckle_type'] = 'Objects.BuiltElements.Revit.Curve.RoomBoundaryLine'
+			boundaryObj = obs.recompose_base(boundary)
+
+			if self.object['elements'][self.collections['boundaries']]:
+				self.object['elements'][self.collections['boundaries']]['elements'].append(boundaryObj)
+
+		overrides = {
+			'type': 'Room'
+		}
+
+		room = self.override_schema(zone, self.schema['revit']['room'], overrides)
+
+		return bos.recompose_base(zone)
