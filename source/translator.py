@@ -149,16 +149,16 @@ class TranslatorArchicad2Revit(Translator):
 
 	def map(self):
 		# self.log_stats()
-		# # prepare the level structure before (!) the execution of remapping process
-		# # seems to be more stable to assign objects onto the existing levels
-		# levels = self.add_collection('Levels', 'Levels Type')
-		# self.object['@levels'] = levels
-		# for i in range(-10, 20):
-		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
-		# 	if story:
-		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-		# 		level = self.map_story(story)
-		# 		self.object['@levels']['elements'].append(level)
+		# prepare the level structure before (!) the execution of remapping process
+		# seems to be more stable to assign objects onto the existing levels
+		levels = self.add_collection('Levels', 'Levels Type')
+		self.object['@levels'] = levels
+		for i in range(-10, 20):
+			story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
+			if story:
+				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+				level = self.map_story(story)
+				self.object['@levels']['elements'].append(level)
 
 		boundaries = self.add_collection('Room Separation Lines', 'Revit Category')
 		self.object['elements'].append(boundaries)
@@ -189,24 +189,26 @@ class TranslatorArchicad2Revit(Translator):
 		
 		return speckle_object
 
+	def map_door(self, speckle_object, **parameters):
+
+		return speckle_object
+
 	def map_opening(self, speckle_object, **parameters):
 		"""
 		Remap opening > shaft
 		"""
 		def map_opening_horizontal(speckle_object, **parameters):
 			""" shaft openings in slabs, roofs, meshes? """
-			# print (speckle_object['elementType'])
-			pass
+			return speckle_object
 
 		def map_opening_vertical(speckle_object, **parameters):
 			""" shaft openings in walls """
-			# print (speckle_object['elementType'])
-			pass
+			return speckle_object
 
 		if parameters['host'] == 'slab' or parameters['host'] == 'roof':
-			map_opening_horizontal(speckle_object, **parameters)
+			return map_opening_horizontal(speckle_object)
 		elif parameters['host'] == 'wall':
-			map_opening_vertical(speckle_object, **parameters)
+			return map_opening_vertical(speckle_object)
 
 	def map_slab(self, speckle_object, **parameters):
 		"""
@@ -215,8 +217,8 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		slab = bos.traverse_base(speckle_object)[1]
 
-		parameters = self.get_general_parameters(slab)
-		top_offset = parameters.get('Top Elevation To Home Story', 0) # revit uses top elevation
+		general = self.get_general_parameters(slab)
+		top_offset = general.get('Top Elevation To Home Story', 0) if general else 0  # revit uses top elevation
 		body = self.get_material_body(slab)
 
 		overrides = {
@@ -230,14 +232,14 @@ class TranslatorArchicad2Revit(Translator):
 		}
 		floor = self.override_schema(slab, self.schema['revit']['floor'], overrides)
 
-		elements = slab.get('elements', None)
-		if elements:
-			for e in range (0, len(slab['elements'])):
-				element = slab['elements'][e]
-				if element['elementType'].lower() in self.categories:
+		if floor.get('elements', None):
+			for e in range (0, len(floor['elements'])):
+				element = floor['elements'][e]
+				element_type = element['elementType'].lower()
+				if element_type in self.categories:
 					self.map_opening(
-						speckle_object = slab['elements'][e],
-						host = slab['elementType'].lower()
+						speckle_object = floor['elements'][e],
+						host = floor['elementType'].lower()
 					)
 
 		return bos.recompose_base(floor)
@@ -303,7 +305,6 @@ class TranslatorArchicad2Revit(Translator):
 				'end': {'x': ex + off_x, 'y': ey  + off_y}
 			}
 		}
-
 		wall = self.override_schema(wall, self.schema['revit']['wall'], overrides)
 
 		# curved walls
@@ -369,9 +370,49 @@ class TranslatorArchicad2Revit(Translator):
 			wall['startPoint'] = None
 			wall['endPoint'] = None
 
+		# map sub elements
+		if wall.get('elements'):
+			for e in range (0, len(wall['elements'])):
+				element = wall['elements'][e]
+				element_type = element['elementType'].lower()
+				if element_type in self.categories:
+					sub_mapper = getattr(self, 'map_' + element_type)
+					sub = sub_mapper(
+						speckle_object = wall['elements'][e],
+						host = wall['elementType'].lower()
+					)
+					sub['level'] = wall['level']
+					wall['elements'][e] = sub
+				else:
+					self.log.warning(f'Translation skipped for category: $y("{element['elementType']}")')
+
 		return bos.recompose_base(wall)
 
 		#todo: kurwatura!
+
+	def map_window(self, speckle_object, **parameters):
+		"""
+		Remap zone > room schema.
+		"""
+		window = speckle_object
+
+		# overrides = {
+		# 	'definition': {
+		# 		'type': 'Window'
+		# 	},
+		# 	'transform': {
+		# 		'matrix': [
+		# 			1, 0, 0, 	0,
+		# 			0, 1, 0, 	0,
+		# 			0, 0, 1,	0,
+		# 			0, 0, 0,	1
+		# 		]
+		# 	}
+		# }
+
+		# window = self.override_schema(window, self.schema['revit']['window'], overrides)
+
+		return window
 
 	def map_zone(self, speckle_object, **parameters):
 		"""

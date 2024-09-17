@@ -14,6 +14,9 @@
 		},
 		"wall": {
 			"speckle_type": "Objects.BuiltElements.Wall:Objects.BuiltElements.Archicad.ArchicadWall"
+		},
+		"window": {
+			"speckle_type": "Objects.BuiltElements.Archicad.ArchicadFenestration:Objects.BuiltElements.Archicad.ArchicadDoorWindowBase:Objects.BuiltElements.Archicad.ArchicadWindow"
 		}
 	},
 	"revit": {
@@ -53,6 +56,12 @@
 			"createView": true,
 			"referenceOnly": false
 		},
+		"room": {
+			"category": "Rooms",
+			"builtInCategory": "OST_Rooms",
+			"speckle_type": "Objects.BuiltElements.Room",
+			"type": null
+		},
 		"wall": {
 			"category": "Walls",
 			"builtInCategory": "OST_Walls",
@@ -89,11 +98,28 @@
 				}
 			}
 		},
-		"room": {
-			"category": "Rooms",
-			"builtInCategory": "OST_Rooms",
-			"speckle_type": "Objects.BuiltElements.Room",
-			"type": null
+		"window": {
+			"category": "Windows",
+			"builtInCategory": "OST_Windows",
+			"speckle_type": "Objects.Other.Revit.RevitInstance",
+			"definition": {
+				"category": "Windows",
+				"builtInCategory": "OST_Windows",
+				"speckle_type": "Objects.BuiltElements.Revit.RevitElementType:Objects.BuiltElements.Revit.RevitSymbolElementType",
+				"type": null,
+				"placementType": "OneLevelBasedHosted",
+				"units": "m"
+			},
+			"transform": {
+				"speckle_type": "Objects.Other.Transform",
+				"units": "m",
+				"matrix": [
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0
+				]
+			}
 		}
 	}
 }
