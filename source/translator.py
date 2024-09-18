@@ -309,21 +309,35 @@ class TranslatorArchicad2Revit(Translator):
 
 		# curved walls
 		if wall['arcAngle']:
-			d = wall['baseLine']['length']
+			t = 0.250/2
+			d = wall['baseLine']['length'] # is a chorde!
 			r = d / (2 * math.sin(wall['arcAngle']/2))
-			dx = (ex - sx)/2
-			dy = (ey - sy)/2
 
-			h = r * math.sin(math.pi/2-wall['arcAngle']/2) # perp of diff middle
+			dx = (ex - sx) / 2
+			dy = (ey - sy) / 2
+			x_chord_angle = math.atan(dy/dx)
+
+			a = r * math.sin(math.pi/2-wall['arcAngle']/2) # perp of diff middle
 			b = r * math.cos(math.pi/2-wall['arcAngle']/2) # base of diff middle
-			da = math.atan(dy/dx)
+			q1 = math.atan((r-a)/b)
+			
+			mid_chord = b / math.cos(q1)
+			q2 = x_chord_angle - q1
+			mx = sx + mid_chord * math.cos(q2)
+			my = sy + mid_chord * math.sin(q2)
 
-			q = math.atan((r-h)/b)
-			md = b / math.cos(q)
-			ma = da - q
+			x_start_angle = math.pi - (math.pi/2 - wall['arcAngle']/2) - x_chord_angle
+			x_mid_angle = math.pi - math.pi/2 - x_chord_angle
+			x_end_angle = (math.pi/2 - wall['arcAngle']/2) - x_chord_angle
 
-			mx = md * math.cos(ma)
-			my = md * math.sin(ma)
+			sdx = sx - math.cos(x_start_angle) * t
+			sdy = sy + math.sin(x_start_angle) * t
+
+			mdx = mx - math.cos(x_mid_angle) * t
+			mdy = my + math.sin(x_mid_angle) * t
+
+			edx = ex - math.cos(x_end_angle) * t
+			edy = ey + math.sin(x_end_angle) * t
 
 			wall['baseLine']['plane'] = {
 				'units': 'm',
@@ -364,14 +378,14 @@ class TranslatorArchicad2Revit(Translator):
 			wall['baseLine']['endAngle'] = 0
 
 			wall['baseLine']['startPoint'] = wall['baseLine']['start']
-			wall['baseLine']['startPoint']['x'] = sx
-			wall['baseLine']['startPoint']['y'] = sy
+			wall['baseLine']['startPoint']['x'] = sdx
+			wall['baseLine']['startPoint']['y'] = sdy
 			wall['baseLine']['endPoint'] = wall['baseLine']['end']
-			wall['baseLine']['endPoint']['x'] = ex
-			wall['baseLine']['endPoint']['y'] = ey
+			wall['baseLine']['endPoint']['x'] = edx
+			wall['baseLine']['endPoint']['y'] = edy
 			wall['baseLine']['midPoint'] = {
-				'x': sx + mx,
-				'y': sy + my,
+				'x': mdx,
+				'y': mdy,
 				'z': 0,
 				'units': 'm',
 				'speckle_type': 'Objects.Geometry.Point'
