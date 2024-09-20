@@ -310,7 +310,7 @@ class TranslatorArchicad2Revit(Translator):
 		# curved walls
 		if wall['arcAngle']:
 
-			t = 0.2
+			t = fix
 
 			# chord midpoint
 			dx = (sx + ex) / 2
@@ -320,48 +320,31 @@ class TranslatorArchicad2Revit(Translator):
 			chord = wall['baseLine']['length']
 			radius = chord / (2 * math.sin(wall['arcAngle']/2))
 
-			# slope of perpendicular bisector
+			# angles
 			slope = (ey - sy) / (ex - sx)
-			slope_angle = math.atan(-1/slope)
+			slope_angle = math.atan(-1/slope) # bisector chord normale
+			start_angle = (math.pi/2-wall['arcAngle']/2) - (math.pi/2-slope_angle)
+			end_angle = math.pi - (math.pi/2-wall['arcAngle']/2) - (math.pi/2-slope_angle)
 
+			# chord midpoint
 			hypo = math.sqrt(radius**2 - (chord/2)**2)
 
-			vx = int(math.copysign(1, dx-sx))	# x vector
-			vy = int(math.copysign(vx, dy-sy))	# y vector
+			# direction vectors
+			mvx = -int(math.copysign(1, dx-sx)) * int(math.copysign(1, slope_angle))	# mid
+			svx =  int(math.copysign(1, dx-sx)) * int(math.copysign(1, slope_angle))	# start
+			evx =  int(math.copysign(1, dx-sx)) * int(math.copysign(1, slope_angle))	# end
 			
-			mx = dx + (radius - hypo) * math.cos(slope_angle) * vx
-			my = dy + (radius - hypo) * math.sin(slope_angle) * vy
+			# midpoint
+			mx = dx + (radius - hypo) * math.cos(slope_angle) * mvx
+			my = dy + (radius - hypo) * math.sin(slope_angle) * mvx
 
-			# print ((radius - hypo) * math.sin(slope_angle) * vy)
-			# print (my)
-
-			# t = 0.250/2
-			# d = wall['baseLine']['length'] # is a chorde!
-			# r = d / (2 * math.sin(wall['arcAngle']/2))
-
-			# x_chord_angle = math.atan(dy/dx)
-
-			# a = r * math.sin(math.pi/2-wall['arcAngle']/2) # perp of diff middle
-			# b = r * math.cos(math.pi/2-wall['arcAngle']/2) # base of diff middle
-			# q1 = math.atan((r-a)/b)
-			
-			# mid_chord = b / math.cos(q1)
-			# q2 = x_chord_angle - q1
-			# mx = sx + mid_chord * math.cos(q2)
-			# my = sy + mid_chord * math.sin(q2)
-
-			# x_start_angle = math.pi - (math.pi/2 - wall['arcAngle']/2) - x_chord_angle
-			# x_mid_angle = math.pi - math.pi/2 - x_chord_angle
-			# x_end_angle = (math.pi/2 - wall['arcAngle']/2) - x_chord_angle
-
-			# sdx = sx - math.cos(x_start_angle) * t
-			# sdy = sy + math.sin(x_start_angle) * t
-
-			# mdx = mx - math.cos(x_mid_angle) * t
-			# mdy = my + math.sin(x_mid_angle) * t
-
-			# edx = ex - math.cos(x_end_angle) * t
-			# edy = ey + math.sin(x_end_angle) * t
+			# updated coordinates
+			mdx = mx + (t * math.cos(slope_angle) * -mvx)
+			mdy = my + (t * math.sin(slope_angle) * -mvx)
+			sdx = sx + (t * math.cos(start_angle) * svx)
+			sdy = sy + (t * math.sin(start_angle) * svx)
+			edx = ex + (t * math.cos(end_angle) * evx)
+			edy = ey + (t * math.sin(end_angle) * evx)
 
 			wall['baseLine']['plane'] = {
 				'units': 'm',
@@ -402,15 +385,15 @@ class TranslatorArchicad2Revit(Translator):
 			wall['baseLine']['endAngle'] = 0
 
 			wall['baseLine']['startPoint'] = wall['baseLine']['start']
-			wall['baseLine']['startPoint']['x'] = sx
-			wall['baseLine']['startPoint']['y'] = sy
+			wall['baseLine']['startPoint']['x'] = sdx
+			wall['baseLine']['startPoint']['y'] = sdy
 			wall['baseLine']['endPoint'] = wall['baseLine']['end']
-			wall['baseLine']['endPoint']['x'] = ex
-			wall['baseLine']['endPoint']['y'] = ey
+			wall['baseLine']['endPoint']['x'] = edx
+			wall['baseLine']['endPoint']['y'] = edy
 			wall['baseLine']['midPoint'] = {
-				'x': mx,
-				'y': my,
-				'z': 0,
+				'x': mdx,
+				'y': mdy,
+				'z': sz,
 				'units': 'm',
 				'speckle_type': 'Objects.Geometry.Point'
 			}
@@ -438,8 +421,6 @@ class TranslatorArchicad2Revit(Translator):
 					self.log.warning(f'Translation skipped for category: $y("{element['elementType']}")')
 
 		return bos.recompose_base(wall)
-
-		#todo: kurwatura!
 
 	def map_window(self, speckle_object, **parameters):
 		"""
