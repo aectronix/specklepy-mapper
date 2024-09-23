@@ -6,6 +6,7 @@ import re
 from abc import ABC, abstractmethod
 from specklepy.objects.base import Base
 from specklepy.objects.other import Collection
+from specklepy.objects.geometry import *
 from specklepy.serialization.base_object_serializer import BaseObjectSerializer
 
 from .logging import LogWrapper
@@ -34,6 +35,13 @@ class Translator(ABC):
 		collection.elements = []
 		collection.id = collection.get_id(decompose=True)
 		return collection
+
+	def add_point(self, x, y, z, units='m', traverse=False):
+		pointObj = Point.from_list([x, y, z])
+		pointObj.units = units
+		if traverse:
+			return BaseObjectSerializer().traverse_base(pointObj)[1]
+		return pointObj
 
 	@staticmethod
 	def get_schema(name):
@@ -250,6 +258,7 @@ class TranslatorArchicad2Revit(Translator):
 			if 'plane' in floor['outline']['segments'][i]:
 				segment = floor['outline']['segments'][i]
 				floor['outline']['segments'][i] = {
+					# todo:  replace by speckle classes/methods
 				    "plane": {
 				        "xdir": {
 				            "x": 1,
@@ -324,14 +333,14 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(speckle_object)[1]
 
-		# ref line locations
+		# ref line locations & ndir
 		baseline = {
-			'Center': 0,		# Wall Centerline
-			'Core Center': 1,	# Core Centerline
-			'Outside': 2,		# Finish Face: Exterior
-			'Inside': 3,		# Finish Face: Interior
-			'Core Outside': 4,	# Core Face: Exterior
-			'Core Inside': 5	# Core Face: Inside
+			'Center': (0, 1),		# Wall Centerline
+			'Core Center': (1, 1),	# Core Centerline
+			'Outside': (2, -1),		# Finish Face: Exterior
+			'Inside': (3, -1),		# Finish Face: Interior
+			'Core Outside': (4, 1),	# Core Face: Exterior
+			'Core Inside': (5, -1)	# Core Face: Inside
 		}
 
 		# ref line coordinates
@@ -344,33 +353,37 @@ class TranslatorArchicad2Revit(Translator):
 		fix = wall['thickness'] / 2
 		out = wall['offsetFromOutside'] if wall['offsetFromOutside'] else 0
 
-		flip = -1 if wall['flipped'] == True else 1
-		direction = self.get_vector_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
-
-		off_x = (out - fix) * direction['y'] * flip * -1
-		off_y = (out - fix) * direction['x'] * flip
-
 		overrides = {
 			'type': str(wall['structure']) + ' ' + str(wall['thickness']),
 			# 'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
 				'WALL_KEY_REF_PARAM': {
-					'value': baseline[wall['referenceLineLocation']]
+					'value': baseline[wall['referenceLineLocation']][0]
 				}
-			},
-			'baseLine': {
+			}
+		}
+
+		# straight walls
+		if not wall['arcAngle']:
+
+			flip = -1 if wall['flipped'] == True else 1
+			direction = self.get_vector_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
+			off_x = (out - fix) * direction['y'] * flip * -1
+			off_y = (out - fix) * direction['x'] * flip
+
+			wall_schema = self.schema['revit']['wall']
+			wall_schema['baseLine'] = self.schema['revit']['wall_base']
+			overrides['baseLine'] = {
 				'start': {'x': sx + off_x, 'y': sy + off_y},
 				'end': {'x': ex + off_x, 'y': ey  + off_y}
 			}
-		}
-		wall = self.override_schema(wall, self.schema['revit']['wall'], overrides)
+			wall = self.override_schema(wall, wall_schema, overrides)
 
 		# curved walls
-		if wall['arcAngle']:
+		elif wall['arcAngle']:
 
 			t = fix
-
 			# chord midpoint
 			dx = (sx + ex) / 2
 			dy = (sy + ey) / 2
@@ -398,72 +411,32 @@ class TranslatorArchicad2Revit(Translator):
 			my = dy + (radius - hypo) * math.sin(slope_angle) * mvx
 
 			# updated coordinates
-			mdx = mx + (t * math.cos(slope_angle) * -mvx)
-			mdy = my + (t * math.sin(slope_angle) * -mvx)
-			sdx = sx + (t * math.cos(start_angle) * svx)
-			sdy = sy + (t * math.sin(start_angle) * svx)
-			edx = ex + (t * math.cos(end_angle) * evx)
-			edy = ey + (t * math.sin(end_angle) * evx)
+			bdir = baseline[wall['referenceLineLocation']][1]
+			mdx = mx + (t * math.cos(slope_angle) * -mvx * bdir)
+			mdy = my + (t * math.sin(slope_angle) * -mvx * bdir)
+			sdx = sx + (t * math.cos(start_angle) * svx * bdir)
+			sdy = sy + (t * math.sin(start_angle) * svx * bdir)
+			edx = ex + (t * math.cos(end_angle) * evx * bdir)
+			edy = ey + (t * math.sin(end_angle) * evx * bdir)
 
-			# TODO: fix offsets
+			# redefine plane & coordinates
+			planeObj = Plane.from_list([0,0,0,	0,0,1,	1,0,0,	0,1,0, 3])
+			plane = BaseObjectSerializer().traverse_base(planeObj)[1]
+			start = self.add_point(sdx, sdy, sz, traverse=True)
+			mid = self.add_point(mdx, mdy, sz, traverse=True)
+			end = self.add_point(edx, edy, sz, traverse=True)
 
-			wall['baseLine']['plane'] = {
-				'units': 'm',
-				'speckle_type': 'Objects.Geometry.Plane',
-				'xdir': {
-					'x': 1,
-					'y': 0,
-					'z': 0,
-					'units': 'm',
-					'speckle_type': 'Objects.Geometry.Vector'
-				},
-				'ydir': {
-					'x': 0,
-					'y': 1,
-					'z': 0,
-					'units': 'm',
-					'speckle_type': 'Objects.Geometry.Vector'
-				},
-				'normal': {
-					'x': 0,
-					'y': 0,
-					'z': 1,
-					'units': 'm',
-					'speckle_type': 'Objects.Geometry.Vector'
-				},
-				'origin': {
-					'x': 0,
-					'y': 0,
-					'z': 0,
-					'units': 'm',
-					'speckle_type': 'Objects.Geometry.Point'
-				}
-			}
-			# wall['baseLine']['radius'] = r
-			# wall['baseLine']['length'] = d
-
-			wall['baseLine']['startAngle'] = 0
-			wall['baseLine']['endAngle'] = 0
-
-			wall['baseLine']['startPoint'] = wall['baseLine']['start']
-			wall['baseLine']['startPoint']['x'] = sdx
-			wall['baseLine']['startPoint']['y'] = sdy
-			wall['baseLine']['endPoint'] = wall['baseLine']['end']
-			wall['baseLine']['endPoint']['x'] = edx
-			wall['baseLine']['endPoint']['y'] = edy
-			wall['baseLine']['midPoint'] = {
-				'x': mdx,
-				'y': mdy,
-				'z': sz,
-				'units': 'm',
-				'speckle_type': 'Objects.Geometry.Point'
+			overrides['baseLine'] = {
+				'plane': plane,
+				'startPoint': start,
+				'midPoint': mid,
+				'endPoint': end,
+				'angleRadians': wall['arcAngle']
 			}
 
-			wall['baseLine']['angleRadians'] = wall['arcAngle']
-			wall['baseLine']['speckle_type'] = 'Objects.Geometry.Arc'
-
-			wall['startPoint'] = None
-			wall['endPoint'] = None
+			wall_schema = self.schema['revit']['wall']
+			wall_schema['baseLine'] = self.schema['revit']['wall_base_curved']
+			wall = self.override_schema(wall, wall_schema, overrides)
 
 		# map sub elements
 		if wall.get('elements'):

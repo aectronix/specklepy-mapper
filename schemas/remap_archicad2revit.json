@@ -86,17 +86,28 @@
 					"units": "m",
 					"value": 0
 				}
-			},
-			"baseLine": {
-				"start": {
-					"x": null,
-					"y": null
-				},
-				"end": {
-					"x": null,
-					"y": null
-				}
 			}
+		},
+		"wall_base": {
+			"start": {
+				"x": null,
+				"y": null
+			},
+			"end": {
+				"x": null,
+				"y": null
+			}
+		},
+		"wall_base_curved": {
+			"plane": null,
+			"startPoint": null,
+			"midPoint": null,
+			"endPoint": null,
+			"angleRadians": null,
+			"startAngle": 0,
+			"endAngle": 0,
+			"angleRadians": 0,
+			"speckle_type": "Objects.Geometry.Arc"
 		},
 		"window": {
 			"category": "Windows",
