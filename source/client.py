@@ -53,7 +53,7 @@ class SpeckleWrapper():
 
 		return result
 
-	def publish(self, obj, branch, message, retries=10, delay=3):
+	def publish(self, obj, projectId, branch, message, retries=10, delay=3):
 
 		self.log.info(f'Publishing commit, branch: $y("{branch}"), message: $y("{message}")...')
 		bos = BaseObjectSerializer()
@@ -63,7 +63,7 @@ class SpeckleWrapper():
 			try:
 				obj_updated = operations.send(obj, [self.transport])
 				commit = self.client.commit.create(
-				    'aeb487f0e6',
+				    projectId,
 				    obj_updated,
 				    branch_name = branch,
 				    message = message
@@ -108,38 +108,6 @@ class SpeckleGQL():
 
 	    response = requests.post(url, json=payload, headers=headers)
 	    return response.json() if response.status_code == 200 else None
-
-	def get_total_count(self, projectId, objectId, speckle_type):
-		operator = '!=' if speckle_type == None else '='
-		query = """
-			query Object($objectId: String!, $projectId: String!, $query: [JSONObject!], $select: [String], $orderBy: JSONObject) {
-			  project(id: $projectId) {
-			    object(id: $objectId) {
-			      children(query: $query, select: $select, orderBy: $orderBy) {
-			        totalCount
-			      }
-			    }
-			  }
-			}
-		"""
-		variables = {
-			"projectId": projectId,
-			"objectId": objectId,
-			"query": [
-				{
-				  "field": "speckle_type",
-				  "value": speckle_type,
-				  "operator": operator
-				}
-			],
-			"select": [
-				"speckle_type"
-			]
-		}
-
-		response = self.execute(query, variables)
-		result = response['data']['project']['object']['children']['totalCount']
-		return result
 
 	def get_level_data(self, projectId, objectId, idx):
 		"""
@@ -186,3 +154,55 @@ class SpeckleGQL():
 		result = response['data']['project']['object']['children']['objects']
 
 		return result[0]['data']['level'] if result else None
+
+	def get_total_count(self, projectId, objectId, speckle_type):
+		operator = '!=' if speckle_type == None else '='
+		query = """
+			query Object($objectId: String!, $projectId: String!, $query: [JSONObject!], $select: [String], $orderBy: JSONObject) {
+			  project(id: $projectId) {
+			    object(id: $objectId) {
+			      children(query: $query, select: $select, orderBy: $orderBy) {
+			        totalCount
+			      }
+			    }
+			  }
+			}
+		"""
+		variables = {
+			"projectId": projectId,
+			"objectId": objectId,
+			"query": [
+				{
+				  "field": "speckle_type",
+				  "value": speckle_type,
+				  "operator": operator
+				}
+			],
+			"select": [
+				"speckle_type"
+			]
+		}
+
+		response = self.execute(query, variables)
+		result = response['data']['project']['object']['children']['totalCount']
+		return result
+
+	def get_object_data(self, projectId, objectId):
+		query = """
+			query Object($objectId: String!, $projectId: String!) {
+			  project(id: $projectId) {
+			    object(id: $objectId) {
+			      id
+			      data
+			    }
+			  }
+			}
+		"""
+		variables = {
+			"projectId": projectId,
+			"objectId": objectId
+		}
+
+		response = self.execute(query, variables)
+		result = response['data']['project']['object']['data']
+		return result

@@ -242,6 +242,65 @@ class TranslatorArchicad2Revit(Translator):
 						host = floor['elementType'].lower()
 					)
 
+		floor['shape']= None
+
+		# note: there is an issue with curved slabs,
+		# unit convertion doesn't work for some reason, so we have to redefine this segment
+		for i in range(0, len(floor['outline']['segments'])-1):
+			if 'plane' in floor['outline']['segments'][i]:
+				segment = floor['outline']['segments'][i]
+				floor['outline']['segments'][i] = {
+				    "plane": {
+				        "xdir": {
+				            "x": 1,
+				            "y": 0,
+				            "z": 0,
+				            "units": "mm",
+				            "speckle_type": "Objects.Geometry.Vector"
+				        },
+				        "ydir": {
+				            "x": 0,
+				            "y": 1,
+				            "z": 0,
+				            "units": "mm",
+				            "speckle_type": "Objects.Geometry.Vector"
+				        },
+				        "units": "mm",
+				        "normal": {
+				            "x": 0,
+				            "y": 0,
+				            "z": 1,
+				            "units": "mm",
+				            "speckle_type": "Objects.Geometry.Vector"
+				        },
+				        "speckle_type": "Objects.Geometry.Plane"
+				    },
+				    "units": "mm",
+				    "startPoint": {
+				        "x": segment['startPoint']['x']*1000,
+				        "y": segment['startPoint']['y']*1000,
+				        "z": segment['startPoint']['z']*1000,
+				        "units": "mm",
+				        "speckle_type": "Objects.Geometry.Point"
+				    },
+				    "midPoint": {
+				        "x": segment['midPoint']['x']*1000,
+				        "y": segment['midPoint']['y']*1000,
+				        "z": segment['midPoint']['z']*1000,
+				        "units": "mm",
+				        "speckle_type": "Objects.Geometry.Point"
+				    },
+				    "endPoint": {
+				        "x": segment['endPoint']['x']*1000,
+				        "y": segment['endPoint']['y']*1000,
+				        "z": segment['endPoint']['z']*1000,
+				        "units": "mm",
+				        "speckle_type": "Objects.Geometry.Point"
+				    },
+				    "angleRadians": 1.5707963267948961,
+				    "speckle_type": "Objects.Geometry.Arc"
+				}
+
 		return bos.recompose_base(floor)
 
 	def map_story(self, story, **parameters):
@@ -292,7 +351,7 @@ class TranslatorArchicad2Revit(Translator):
 		off_y = (out - fix) * direction['x'] * flip
 
 		overrides = {
-			'type': str(wall['structure']),
+			'type': str(wall['structure']) + ' ' + str(wall['thickness']),
 			# 'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
@@ -345,6 +404,8 @@ class TranslatorArchicad2Revit(Translator):
 			sdy = sy + (t * math.sin(start_angle) * svx)
 			edx = ex + (t * math.cos(end_angle) * evx)
 			edy = ey + (t * math.sin(end_angle) * evx)
+
+			# TODO: fix offsets
 
 			wall['baseLine']['plane'] = {
 				'units': 'm',
