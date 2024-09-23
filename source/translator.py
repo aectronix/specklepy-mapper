@@ -43,6 +43,15 @@ class Translator(ABC):
 			return BaseObjectSerializer().traverse_base(pointObj)[1]
 		return pointObj
 
+	def add_line(self, sx, sy, sz, ex, ey, ez, units='m', traverse=False):
+		lineObj = Line()
+		lineObj.start = self.add_point(sx, sy, sz, units=units)
+		lineObj.end = self.add_point(ex, ey, ez, units=units)
+		lineObj.units = units
+		if traverse:
+			return BaseObjectSerializer().traverse_base(lineObj)[1]
+		return lineObj
+
 	@staticmethod
 	def get_schema(name):
 		"""
@@ -207,16 +216,60 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		def map_opening_horizontal(speckle_object, **parameters):
 			""" shaft openings in slabs, roofs, meshes? """
-			return speckle_object
+			opening = speckle_object
+			general = self.get_general_parameters(opening)
+			btm_offset = general.get('Bottom Elevation To Home Story', 0) if general else 0
+			top_offset = general.get('Top Elevation To Home Story', 0) if general else 0
+			altitude = top_offset - btm_offset
+
+			opening.setdefault('bottomLevel', parameters['host_level'])
+			opening.setdefault('topLevel', parameters['host_level'])
+
+			overrides = {
+				'height': altitude,
+				'parameters': {
+					'WALL_BASE_OFFSET': {
+						'value': btm_offset,
+					},
+					'WALL_TOP_OFFSET': {
+						'value': top_offset,
+					}
+				},
+				'outline': {
+					'segments': []
+				}
+			}
+			shaft = self.override_schema(opening, self.schema['revit']['shaft_horizontal'], overrides)
+
+			# flat list with x,y,z coordinates of each point
+			# the last pair is redundant, as points to the first coordinates
+			if 'value' in shaft['outline']:
+				coords = shaft['outline']['value']
+				for i in range(0, len(coords) // 3 - 2):
+					sidx = i * 3
+					eidx = (i + 1) * 3
+					shaft['outline']['segments'].append(
+						self.add_line(
+							coords[sidx], coords[sidx+1], coords[sidx+2],
+							coords[eidx], coords[eidx+1], coords[eidx+2],
+							traverse=True))
+
+				shaft['outline']['segments'].append(
+					self.add_line(
+						coords[-6], coords[-5],coords[-4],
+						coords[0], coords[1], coords[2],
+						traverse=True))
+
+			return shaft
 
 		def map_opening_vertical(speckle_object, **parameters):
 			""" shaft openings in walls """
 			return speckle_object
 
 		if parameters['host'] == 'slab' or parameters['host'] == 'roof':
-			return map_opening_horizontal(speckle_object)
+			return map_opening_horizontal(speckle_object, **parameters)
 		elif parameters['host'] == 'wall':
-			return map_opening_vertical(speckle_object)
+			return map_opening_vertical(speckle_object, **parameters)
 
 	def map_slab(self, speckle_object, **parameters):
 		"""
@@ -283,10 +336,14 @@ class TranslatorArchicad2Revit(Translator):
 				element = floor['elements'][e]
 				element_type = element['elementType'].lower()
 				if element_type in self.categories:
-					self.map_opening(
+					shaft = self.map_opening(
 						speckle_object = floor['elements'][e],
-						host = floor['elementType'].lower()
+						host = floor['elementType'].lower(),
+						host_level = floor['level'],
+						host_thickness = floor['thickness'],
+						host_top_offset = top_offset
 					)
+					floor['elements'][e] = shaft
 
 		return bos.recompose_base(floor)
 
@@ -308,7 +365,15 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		Remap wall schema.
 
-		Note: the global issue is in differences between maintaining baseline in Archicad an Revit.
+		Note: the global issue is in differences between maintaining baselines in Archicad an Revit.
+		Revit uses center lines for internal positioning of entire wall, while Archicad operates
+		according to the reference line location. So Speckle takes the "actual" baseline location according
+		to Archicad, but not Revit. So we have to adjust the baseline location within the Speckle schema
+		to "put" it into the "right" position from the Revit perspective.
+
+		For straight walls it's just to offset x,y respectively.
+		For curved walls we have to calculate midpoint according to saved start/stop point and then offset
+		all the trio by the chord normal, according to the baseline position.
 		"""
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(speckle_object)[1]

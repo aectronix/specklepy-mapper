@@ -29,12 +29,12 @@ class App():
 			'slab',
 			'wall'
 		]
-		speckle_object = self.speckle.retrieve('aeb487f0e6', 'ab2443770d')
-		a2r = TranslatorFactory.get(translator, client=self.speckle, speckle_object=speckle_object, categories=categories)
+		speckle_object = self.speckle.retrieve('aeb487f0e6', '0122c24f69')
+		a2r = TranslatorFactory.get(translator, client=self.speckle, speckle_object=speckle_object)
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'aeb487f0e6', 'test', 'zvd slabs 3a8 exp')
+		self.speckle.publish(speckle_object, 'aeb487f0e6', 'test', 'test exp 0b')
 
 if __name__ == "__main__":
 

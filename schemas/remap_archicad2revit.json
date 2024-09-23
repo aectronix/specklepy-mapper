@@ -72,6 +72,49 @@
 			"speckle_type": "Objects.BuiltElements.Room",
 			"type": null
 		},
+		"shaft_horizontal": {
+			"category": "Shaft Openings",
+			"builtInCategory": "OST_ShaftOpening",
+			"speckle_type": "Objects.BuiltElements.Opening:Objects.BuiltElements.Revit.RevitOpening:Objects.BuiltElements.Revit.RevitShaft",
+			"type": "Opening Cut",
+			"units": "m",
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"WALL_BASE_OFFSET": {
+					"name": "Base Offset",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "WALL_BASE_OFFSET",
+					"applicationUnit": null,
+					"applicationUnitType": "autodesk.unit.unit:meters-1.0.1",
+					"units": "m",
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"value": 0
+				},
+				"WALL_TOP_OFFSET": {
+					"name": "Top Offset",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "WALL_TOP_OFFSET",
+					"applicationUnit": null,
+					"applicationUnitType": "autodesk.unit.unit:meters-1.0.1",
+					"units": "m",
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"value": 0
+				}
+			},
+			"outline": {
+				"units": "m",
+				"speckle_type": "Objects.Geometry.Polycurve",
+				"closed": true,
+				"segments": []
+			}
+		},
 		"wall": {
 			"category": "Walls",
 			"builtInCategory": "OST_Walls",
