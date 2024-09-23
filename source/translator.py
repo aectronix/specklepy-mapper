@@ -223,11 +223,11 @@ class TranslatorArchicad2Revit(Translator):
 		Remap slab > floor schema.
 		"""
 		bos = BaseObjectSerializer()
-		slab = bos.traverse_base(speckle_object)[1]
+		floor = bos.traverse_base(speckle_object)[1]
 
-		general = self.get_general_parameters(slab)
+		general = self.get_general_parameters(floor)
 		top_offset = general.get('Top Elevation To Home Story', 0) if general else 0  # revit uses top elevation
-		body = self.get_material_body(slab)
+		body = self.get_material_body(floor)
 
 		overrides = {
 			'type': body,
@@ -238,8 +238,46 @@ class TranslatorArchicad2Revit(Translator):
 				}
 			}
 		}
-		floor = self.override_schema(slab, self.schema['revit']['floor'], overrides)
 
+		# note: there is an issue with curved slabs,
+		# unit convertion doesn't work for some reason, so we have to redefine this segment
+		for i in range(0, len(floor['outline']['segments'])-1):
+			if 'plane' in floor['outline']['segments'][i]:
+				segment = floor['outline']['segments'][i]
+				# redefine plane & coordinates
+				planeObj = Plane.from_list([0,0,0,	0,0,1,	1,0,0,	0,1,0, 3])
+				plane = BaseObjectSerializer().traverse_base(planeObj)[1]
+				start = self.add_point(
+					segment['startPoint']['x']*1000,
+					segment['startPoint']['y']*1000,
+					segment['startPoint']['z']*1000,
+					units='mm',
+					traverse=True)
+				mid = self.add_point(
+					segment['midPoint']['x']*1000,
+					segment['midPoint']['y']*1000,
+					segment['midPoint']['z']*1000,
+					units='mm',
+					traverse=True)
+				end = self.add_point(
+					segment['endPoint']['x']*1000,
+					segment['endPoint']['y']*1000,
+					segment['endPoint']['z']*1000,
+					units='mm',
+					traverse=True)
+
+				overrides_segment = {
+					'plane': plane,
+					'startPoint': start,
+					'midPoint': mid,
+					'endPoint': end,
+					'angleRadians': segment['angleRadians']
+				}
+				floor['outline']['segments'][i] = self.override_schema(segment, self.schema['revit']['floor_segment_curved'], overrides_segment)
+
+		floor = self.override_schema(floor, self.schema['revit']['floor'], overrides)
+
+		# process sub elements
 		if floor.get('elements', None):
 			for e in range (0, len(floor['elements'])):
 				element = floor['elements'][e]
@@ -249,66 +287,6 @@ class TranslatorArchicad2Revit(Translator):
 						speckle_object = floor['elements'][e],
 						host = floor['elementType'].lower()
 					)
-
-		floor['shape']= None
-
-		# note: there is an issue with curved slabs,
-		# unit convertion doesn't work for some reason, so we have to redefine this segment
-		for i in range(0, len(floor['outline']['segments'])-1):
-			if 'plane' in floor['outline']['segments'][i]:
-				segment = floor['outline']['segments'][i]
-				floor['outline']['segments'][i] = {
-					# todo:  replace by speckle classes/methods
-				    "plane": {
-				        "xdir": {
-				            "x": 1,
-				            "y": 0,
-				            "z": 0,
-				            "units": "mm",
-				            "speckle_type": "Objects.Geometry.Vector"
-				        },
-				        "ydir": {
-				            "x": 0,
-				            "y": 1,
-				            "z": 0,
-				            "units": "mm",
-				            "speckle_type": "Objects.Geometry.Vector"
-				        },
-				        "units": "mm",
-				        "normal": {
-				            "x": 0,
-				            "y": 0,
-				            "z": 1,
-				            "units": "mm",
-				            "speckle_type": "Objects.Geometry.Vector"
-				        },
-				        "speckle_type": "Objects.Geometry.Plane"
-				    },
-				    "units": "mm",
-				    "startPoint": {
-				        "x": segment['startPoint']['x']*1000,
-				        "y": segment['startPoint']['y']*1000,
-				        "z": segment['startPoint']['z']*1000,
-				        "units": "mm",
-				        "speckle_type": "Objects.Geometry.Point"
-				    },
-				    "midPoint": {
-				        "x": segment['midPoint']['x']*1000,
-				        "y": segment['midPoint']['y']*1000,
-				        "z": segment['midPoint']['z']*1000,
-				        "units": "mm",
-				        "speckle_type": "Objects.Geometry.Point"
-				    },
-				    "endPoint": {
-				        "x": segment['endPoint']['x']*1000,
-				        "y": segment['endPoint']['y']*1000,
-				        "z": segment['endPoint']['z']*1000,
-				        "units": "mm",
-				        "speckle_type": "Objects.Geometry.Point"
-				    },
-				    "angleRadians": 1.5707963267948961,
-				    "speckle_type": "Objects.Geometry.Arc"
-				}
 
 		return bos.recompose_base(floor)
 
@@ -329,6 +307,8 @@ class TranslatorArchicad2Revit(Translator):
 	def map_wall(self, speckle_object, **parameters):
 		"""
 		Remap wall schema.
+
+		Note: the global issue is in differences between maintaining baseline in Archicad an Revit.
 		"""
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(speckle_object)[1]

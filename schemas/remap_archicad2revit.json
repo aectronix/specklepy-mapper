@@ -27,6 +27,7 @@
 			"familiy": "Floor",
 			"type": null,
 			"TopElevationToHomeStory": 0,
+			"shape": null,
 			"parameters": {
 				"speckle_type": "Base",
 				"applicationId": null,
@@ -44,6 +45,15 @@
 					"value": 0
 				}
 			}
+		},
+		"floor_segment_curved": {
+			"plane": null,
+			"units": "mm",
+			"startPoint": null,
+			"midPoint": null,
+			"endPoint": null,
+			"angleRadians": null,
+			"speckle_type": "Objects.Geometry.Arc"
 		},
 		"level": {
 			"category": "Levels",

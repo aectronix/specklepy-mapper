@@ -34,7 +34,7 @@ class App():
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'aeb487f0e6', 'test', 'zvd walls exp 0f9')
+		self.speckle.publish(speckle_object, 'aeb487f0e6', 'test', 'zvd slabs 3a8 exp')
 
 if __name__ == "__main__":
 
