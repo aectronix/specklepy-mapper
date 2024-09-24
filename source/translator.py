@@ -185,14 +185,14 @@ class TranslatorArchicad2Revit(Translator):
 		# self.log_stats()
 		# prepare the level structure before (!) the execution of remapping process
 		# seems to be more stable to assign objects onto the existing levels
-		levels = self.add_collection('Levels', 'Levels Type')
-		self.object['@levels'] = levels
-		for i in range(-10, 20):
-			story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
-			if story:
-				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-				level = self.map_story(story)
-				self.object['@levels']['elements'].append(level)
+		# levels = self.add_collection('Levels', 'Levels Type')
+		# self.object['@levels'] = levels
+		# for i in range(-10, 20):
+		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
+		# 	if story:
+		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+		# 		level = self.map_story(story)
+		# 		self.object['@levels']['elements'].append(level)
 
 		# prepare room boundaries
 		boundaries = self.add_collection('Room Separation Lines', 'Revit Category')
@@ -744,6 +744,7 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		return self.map_wido(speckle_object, **parameters)
 
+	# TODO !
 	def map_zone(self, speckle_object, **parameters):
 		"""
 		Remap zone > room schema.
@@ -751,10 +752,12 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		zone = bos.traverse_base(speckle_object)[1]
 
-		zone['category'] = 'Rooms'
-		zone['builtInCategory'] = 'OST_Rooms'
-		zone['speckle_type'] = 'Objects.BuiltElements.Room'
-		zone['type'] = 'Room'
+		properties = self.get_element_properties(zone)
+		general = properties.get('General Parameters', {})
+		group = properties.get('ZONES', {})
+
+		area = general.get('Area', None)
+		category = group.get('spk_prop_category', 'n/a')
 
 		for segment in zone['outline']['segments']:
 			obs = BaseObjectSerializer()
@@ -771,9 +774,28 @@ class TranslatorArchicad2Revit(Translator):
 				self.object['elements'][self.collections['boundaries']]['elements'].append(boundaryObj)
 
 		overrides = {
-			'type': 'Room'
+			'type': 'Room',
+			'parameters': {
+				'ROOM_OCCUPANCY': {
+					'value': category
+				}
+			}
 		}
-
 		room = self.override_schema(zone, self.schema['revit']['room'], overrides)
 
-		return bos.recompose_base(zone)
+		# todo: fix this method
+		room['parameters']['4ff65744-b44a-40a8-a428-d9b649e4173b'] = {
+			'name': 'MRT_A_RoomFixedArea',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '4ff65744-b44a-40a8-a428-d9b649e4173b',
+			'applicationUnit': 'autodesk.unit.unit:squareMeters-1.0.1',
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': 'm²',
+			'value': area
+		}
+
+		return bos.recompose_base(room)

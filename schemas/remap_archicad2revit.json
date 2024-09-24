@@ -23,6 +23,9 @@
 		},
 		"window": {
 			"speckle_type": "Objects.BuiltElements.Archicad.ArchicadFenestration:Objects.BuiltElements.Archicad.ArchicadDoorWindowBase:Objects.BuiltElements.Archicad.ArchicadWindow"
+		},
+		"zone": {
+			"speckle_type": "Objects.BuiltElements.Room:Objects.BuiltElements.Archicad.ArchicadRoom"
 		}
 	},
 	"revit": {
@@ -183,7 +186,24 @@
 			"category": "Rooms",
 			"builtInCategory": "OST_Rooms",
 			"speckle_type": "Objects.BuiltElements.Room",
-			"type": null
+			"type": null,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"ROOM_OCCUPANCY": {
+					"name": "Occupancy",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOM_OCCUPANCY",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": null
+				}
+			}
 		},
 		"shaft_horizontal": {
 			"category": "Shaft Openings",
