@@ -154,6 +154,18 @@ class TranslatorArchicad2Revit(Translator):
 		body = f'{structure[speckle_object['structure']]} ({speckle_object.get('thickness')}{speckle_object.get('units')})'
 		return body if body else None
 
+	def get_top_link(self, speckle_object, traverse=False):
+		"""
+		Retrieves the top link of the given element.
+		"""
+		general = self.get_general_parameters(speckle_object)
+		top_link = general.get('Top Link Story', None) if general else None
+		top_level_ref = re.search(r'\((.*?)\)', top_link)
+		for level in self.object['@levels']['elements']:
+			if top_level_ref and top_level_ref.group(1) == level.name:
+				return BaseObjectSerializer().traverse_base(level)[1]
+		return None
+
 	def log_stats(self):
 		"""
 		Display some stats info
@@ -166,22 +178,21 @@ class TranslatorArchicad2Revit(Translator):
 
 	def map(self):
 		# self.log_stats()
-		# # prepare the level structure before (!) the execution of remapping process
-		# # seems to be more stable to assign objects onto the existing levels
-		# levels = self.add_collection('Levels', 'Levels Type')
-		# self.object['@levels'] = levels
-		# for i in range(-10, 20):
-		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
-		# 	if story:
-		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-		# 		level = self.map_story(story)
-		# 		self.object['@levels']['elements'].append(level)
+		# prepare the level structure before (!) the execution of remapping process
+		# seems to be more stable to assign objects onto the existing levels
+		levels = self.add_collection('Levels', 'Levels Type')
+		self.object['@levels'] = levels
+		for i in range(-10, 20):
+			story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
+			if story:
+				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+				level = self.map_story(story)
+				self.object['@levels']['elements'].append(level)
 
+		# prepare room boundaries
 		boundaries = self.add_collection('Room Separation Lines', 'Revit Category')
 		self.object['elements'].append(boundaries)
-		# # register custom collections
 		self.collections['boundaries'] = len(self.object['elements'])-1
-
 
 		# iterate
 		for collection in self.object['elements']:
@@ -355,7 +366,8 @@ class TranslatorArchicad2Revit(Translator):
 
 		level = bos.read_json(json.dumps (self.schema['revit']['level'], indent = 4))
 		level.id = story['id']
-		level.name = story.get('name', f"{story['index']} level on {story['elevation'] * 1000}")
+		level.name = story['name']
+		# level.name = story.get('name', f"{story['index']} level on {story['elevation'] * 1000}")
 		level.index = story['index']
 		level.elevation = story['elevation']
 
@@ -377,6 +389,10 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(speckle_object)[1]
+
+		# retrieve top level linkage
+		if not wall.get('topLevel'):
+			top_level = self.get_top_link(wall, traverse=True)
 
 		# ref line locations & ndir
 		baseline = {
@@ -400,7 +416,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		overrides = {
 			'type': str(wall['structure']) + ' ' + str(wall['thickness']),
-			# 'topLevel': top_level,
+			'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
 				'WALL_KEY_REF_PARAM': {
