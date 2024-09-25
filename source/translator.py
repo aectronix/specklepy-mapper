@@ -754,10 +754,14 @@ class TranslatorArchicad2Revit(Translator):
 
 		properties = self.get_element_properties(zone)
 		general = properties.get('General Parameters', {})
-		group = properties.get('ZONES', {})
+		group = properties.get('ZONESUM', {})
 
 		area = general.get('Area', None)
 		category = group.get('spk_prop_category', 'n/a')
+		typo = group.get('spk_prop_type', None)
+		function = group.get('spk_prop_func', None)
+		number = group.get('spk_prop_num', None)
+		gid = group.get('spk_prop_gid', None)
 
 		for segment in zone['outline']['segments']:
 			obs = BaseObjectSerializer()
@@ -775,9 +779,13 @@ class TranslatorArchicad2Revit(Translator):
 
 		overrides = {
 			'type': 'Room',
+			'number': number,
 			'parameters': {
 				'ROOM_OCCUPANCY': {
 					'value': category
+				},
+				'ROOM_DEPARTMENT': {
+					'value': function
 				}
 			}
 		}
@@ -796,6 +804,48 @@ class TranslatorArchicad2Revit(Translator):
 			'isTypeParameter': False,
 			'units': 'm²',
 			'value': area
+		}
+
+		room['parameters']['2aaea987-7ae4-4484-8062-fbd77fc0bfbd'] = {
+			'name': 'MRT_A_ApartmentType',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '2aaea987-7ae4-4484-8062-fbd77fc0bfbd',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': typo
+		}
+
+		room['parameters']['1f06fc4b-03e4-4ea2-917e-cf475cc0ea73'] = {
+			'name': 'MRT_A_ApartmentID',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '1f06fc4b-03e4-4ea2-917e-cf475cc0ea73',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': gid
+		}
+
+		room['parameters']['75894bf8-8997-40ee-9130-d3dd46b1e109'] = {
+			'name': 'MRT_A_RoomMod',
+			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
+			'applicationId': None,
+			'applicationInternalName': '75894bf8-8997-40ee-9130-d3dd46b1e109',
+			'applicationUnit': None,
+			'applicationUnitType': None,
+			'isReadOnly': False,
+			'isShared': True,
+			'isTypeParameter': False,
+			'units': None,
+			'value': 1
 		}
 
 		return bos.recompose_base(room)

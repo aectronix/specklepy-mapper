@@ -187,6 +187,7 @@
 			"builtInCategory": "OST_Rooms",
 			"speckle_type": "Objects.BuiltElements.Room",
 			"type": null,
+			"number": 0,
 			"parameters": {
 				"speckle_type": "Base",
 				"applicationId": null,
@@ -195,6 +196,19 @@
 					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 					"applicationId": null,
 					"applicationInternalName": "ROOM_OCCUPANCY",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": null
+				},
+				"ROOM_DEPARTMENT": {
+					"name": "Department",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOM_DEPARTMENT",
 					"applicationUnit": null,
 					"applicationUnitType": null,
 					"isReadOnly": false,
