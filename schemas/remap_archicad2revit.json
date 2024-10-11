@@ -1,4 +1,33 @@
 {
+	"archicad": {
+		"beam": {
+			"speckle_type": "Objects.BuiltElements.Beam:Objects.BuiltElements.Archicad.ArchicadBeam"
+		},
+		"column": {
+			"speckle_type": "Objects.BuiltElements.Column:Objects.BuiltElements.Archicad.ArchicadColumn"
+		},
+		"door": {
+			"speckle_type": "Objects.BuiltElements.Archicad.ArchicadFenestration:Objects.BuiltElements.Archicad.ArchicadDoorWindowBase:Objects.BuiltElements.Archicad.ArchicadDoor"
+		},
+		"opening": {
+			"speckle_type": "Objects.BuiltElements.Opening:Objects.BuiltElements.Archicad.ArchicadOpening"
+		},
+		"roof": {
+			"speckle_type": "Objects.BuiltElements.Roof:Objects.BuiltElements.Archicad.ArchicadShellBase:Objects.BuiltElements.Archicad.ArchicadRoof"
+		},
+		"slab": {
+			"speckle_type": "Objects.BuiltElements.Floor:Objects.BuiltElements.Archicad.ArchicadFloor"
+		},
+		"wall": {
+			"speckle_type": "Objects.BuiltElements.Wall:Objects.BuiltElements.Archicad.ArchicadWall"
+		},
+		"window": {
+			"speckle_type": "Objects.BuiltElements.Archicad.ArchicadFenestration:Objects.BuiltElements.Archicad.ArchicadDoorWindowBase:Objects.BuiltElements.Archicad.ArchicadWindow"
+		},
+		"zone": {
+			"speckle_type": "Objects.BuiltElements.Room:Objects.BuiltElements.Archicad.ArchicadRoom"
+		}
+	},
 	"revit": {
 		"beam": {
 			"category": "Structural Framing",
@@ -90,6 +119,7 @@
 			"familiy": "Floor",
 			"type": null,
 			"TopElevationToHomeStory": 0,
+			"shape": null,
 			"parameters": {
 				"speckle_type": "Base",
 				"applicationId": null,
@@ -107,6 +137,15 @@
 					"value": 0
 				}
 			}
+		},
+		"floor_segment_curved": {
+			"plane": null,
+			"units": "mm",
+			"startPoint": null,
+			"midPoint": null,
+			"endPoint": null,
+			"angleRadians": null,
+			"speckle_type": "Objects.Geometry.Arc"
 		},
 		"level": {
 			"category": "Levels",
@@ -143,42 +182,48 @@
 				}
 			}
 		},
-		"shaft": {
+		"room": {
+			"category": "Rooms",
+			"builtInCategory": "OST_Rooms",
+			"speckle_type": "Objects.BuiltElements.Room",
+			"type": null,
+			"number": 0,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null,
+				"ROOM_OCCUPANCY": {
+					"name": "Occupancy",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOM_OCCUPANCY",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": null
+				},
+				"ROOM_DEPARTMENT": {
+					"name": "Department",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOM_DEPARTMENT",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": null
+				}
+			}
+		},
+		"shaft_horizontal": {
 			"category": "Shaft Openings",
 			"builtInCategory": "OST_ShaftOpening",
 			"speckle_type": "Objects.BuiltElements.Opening:Objects.BuiltElements.Revit.RevitOpening:Objects.BuiltElements.Revit.RevitShaft",
 			"type": "Opening Cut",
-			"units": "m",
-			"bottomLevel": null,
-			"parameters": {
-				"speckle_type": "Base",
-				"applicationId": null,
-				"WALL_BASE_OFFSET": {
-					"name": "Base Offset",
-					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
-					"applicationId": null,
-					"applicationInternalName": "WALL_BASE_OFFSET",
-					"applicationUnit": null,
-					"applicationUnitType": "autodesk.unit.unit:meters-1.0.1",
-					"units": "m",
-					"isReadOnly": false,
-					"isShared": false,
-					"isTypeParameter": false,
-					"value": 0
-				}
-			},
-			"outline": {
-				"units": "m",
-				"speckle_type": "Objects.Geometry.Polycurve",
-				"closed": true,
-				"segments": []
-			}
-		},
-		"shaft_wall": {
-			"category": "Rectangular Straight Wall Opening",
-			"builtInCategory": "OST_SWallRectOpening",
-			"speckle_type": "Objects.BuiltElements.Opening:Objects.BuiltElements.Revit.RevitOpening:Objects.BuiltElements.Revit.RevitWallOpening",
-			"type": "Rectangular Straight Wall Opening",
 			"units": "m",
 			"parameters": {
 				"speckle_type": "Base",
@@ -209,6 +254,12 @@
 					"isTypeParameter": false,
 					"value": 0
 				}
+			},
+			"outline": {
+				"units": "m",
+				"speckle_type": "Objects.Geometry.Polycurve",
+				"closed": true,
+				"segments": []
 			}
 		},
 		"wall": {
@@ -235,17 +286,28 @@
 					"units": "m",
 					"value": 0
 				}
-			},
-			"baseLine": {
-				"start": {
-					"x": null,
-					"y": null
-				},
-				"end": {
-					"x": null,
-					"y": null
-				}
 			}
+		},
+		"wall_base": {
+			"start": {
+				"x": null,
+				"y": null
+			},
+			"end": {
+				"x": null,
+				"y": null
+			}
+		},
+		"wall_base_curved": {
+			"plane": null,
+			"startPoint": null,
+			"midPoint": null,
+			"endPoint": null,
+			"angleRadians": null,
+			"startAngle": 0,
+			"endAngle": 0,
+			"angleRadians": 0,
+			"speckle_type": "Objects.Geometry.Arc"
 		},
 		"window": {
 			"category": "Windows",
