@@ -14,17 +14,18 @@ from .logging import LogWrapper
 class TranslatorFactory:
 
 	@staticmethod
-	def get(translator, client, speckle_object=None, wrapper=None, **parameters):
+	def get(translator, client, streamId=None, speckle_object=None, wrapper=None, **parameters):
 		translators = {
 			'Archicad2Revit': TranslatorArchicad2Revit,
 		}
-		return translators[translator](client, speckle_object, wrapper, **parameters)
+		return translators[translator](client, streamId, speckle_object, wrapper, **parameters)
 
 class Translator(ABC):
 
-	def __init__(self, client, speckle_object=None, wrapper=None, **parameters):
+	def __init__(self, client, streamId=None, speckle_object=None, wrapper=None, **parameters):
 		self.log = None
 		self.client = client
+		self.streamId = streamId
 		self.object = speckle_object
 		self.wrapper = wrapper
 
@@ -76,13 +77,6 @@ class Translator(ABC):
 
 		return {'x': vx, 'y': vy}
 
-	@abstractmethod
-	def map(self):
-		"""
-		Process the commit object and run mapping procedure
-		"""
-		pass
-
 	def override_schema(self, entity, schema, parameters):
 		"""
 		Replaces existing object structure my the specified parameters of the given schema.
@@ -98,11 +92,17 @@ class Translator(ABC):
 				self.override_schema(entity[key], value, parameters[key])
 		return entity
 
+# class Attribute():
+
+# 	def __init__(іуда):
+# 		pass
+
 class TranslatorArchicad2Revit(Translator):
 
-	def __init__(self, client, speckle_object=None, wrapper=None, **parameters):
+	def __init__(self, client, streamId=None, speckle_object=None, wrapper=None, **parameters):
 		self.log = LogWrapper.get_logger('app.translator.a2r')
 		self.client = client
+		self.streamId = streamId
 		self.object = speckle_object
 		self.wrapper = wrapper
 
@@ -111,6 +111,25 @@ class TranslatorArchicad2Revit(Translator):
 		self.schema = self.get_schema('remap_archicad2revit')
 		self.categories = self.get_filtered_categories(parameters)
 		self.collections = {}
+
+		self._materials = {}
+
+	def get_attributes(self, speckle_object):
+
+		def get_attributes_materials(speckle_object):
+			
+			props = self.get_component_properties(speckle_object)
+			for i in range(1, len(props) + 1):
+			    key = f'Component {i}'
+			    if key in props:
+			        material = props[key]['Building Material']
+			        if not material['Name'] in self._materials:
+			        	self.object['attributes']['materials']['elements'].append(material)
+			        	self._materials[material['Name']] = True
+			
+			# print (self._materials)
+
+		get_attributes_materials(speckle_object)
 
 	def get_filtered_categories(self, parameters):
 		"""
@@ -125,6 +144,16 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		if 'elementProperties' in speckle_object:
 			return speckle_object['elementProperties']
+		else:
+			self.log.warning(f'No properties found for {speckle_object['elementType']}: $m({speckle_object['id']})')
+		return None
+
+	def get_component_properties(self, speckle_object):
+		"""
+		Retrieves component properties data for the given object.
+		"""
+		if 'componentProperties' in speckle_object:
+			return speckle_object['componentProperties']
 		else:
 			self.log.warning(f'No properties found for {speckle_object['elementType']}: $m({speckle_object['id']})')
 		return None
@@ -162,9 +191,9 @@ class TranslatorArchicad2Revit(Translator):
 		top_level = None
 		top_link = general.get('Top Link Story', '')
 		top_link_ref = re.search(r'\+ (\d+)', top_link)
-		if top_link_ref and top_link_ref.group(1) and hasattr(self.object, '@levels'):
+		if top_link_ref and top_link_ref.group(1) and hasattr(self.object, 'levels'):
 			top_link_idx = speckle_object['level']['index'] + int(top_link_ref.group(1))
-			for level in self.object['@levels']['elements']:
+			for level in self.object['levels']['elements']:
 				if top_link_idx == level.index:
 					if traverse:
 						return BaseObjectSerializer().traverse_base(level)[1]
@@ -185,19 +214,25 @@ class TranslatorArchicad2Revit(Translator):
 		# self.log_stats()
 		# prepare the level structure before (!) the execution of remapping process
 		# seems to be more stable to assign objects onto the existing levels
-		# levels = self.add_collection('Levels', 'Levels Type')
-		# self.object['@levels'] = levels
-		# for i in range(-10, 20):
-		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
-		# 	if story:
-		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
-		# 		level = self.map_story(story)
-		# 		self.object['@levels']['elements'].append(level)
+		levels = self.add_collection('Levels', 'Levels Type')
+		self.object['levels'] = levels
+		for i in range(-10, 20):
+			story = self.client.query('get_level_data', self.streamId, self.object.id, i)
+			if story:
+				self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+				level = self.map_story(story)
+				self.object['levels']['elements'].append(level)
 
 		# prepare room boundaries
 		boundaries = self.add_collection('Room Separation Lines', 'Revit Category')
 		self.object['elements'].append(boundaries)
 		self.collections['boundaries'] = len(self.object['elements'])-1
+
+		attributes = self.add_collection('Attributes', 'Attribute Type')
+		self.object['attributes'] = attributes
+
+		materials = self.add_collection('Materials', 'Material Type')
+		self.object['attributes']['materials'] = materials
 
 		# iterate
 		for collection in self.object['elements']:
@@ -341,12 +376,16 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		Remap opening > shaft
 		"""
+
+		# layer = speckle_object.layer
+		# print (layer)
+
 		def map_opening_horizontal(speckle_object, **parameters):
 			""" shaft openings in slabs, roofs, meshes? """
 			opening = speckle_object
 			general = self.get_general_parameters(opening)
-			btm_offset = general.get('Bottom Elevation To Home Story', 0) if general else 0
-			top_offset = general.get('Top Elevation To Home Story', 0) if general else 0
+			btm_offset = general.get('Bottom Elevation To Home Story') or 0 if general else 0
+			top_offset = general.get('Top Elevation To Home Story') or 0 if general else 0
 			altitude = top_offset - btm_offset
 
 			opening.setdefault('bottomLevel', parameters['host_level'])
@@ -576,6 +615,8 @@ class TranslatorArchicad2Revit(Translator):
 		bos = BaseObjectSerializer()
 		wall = bos.traverse_base(speckle_object)[1]
 
+		self.get_attributes(wall)
+
 		# retrieve top level linkage
 		if not wall.get('topLevel'):
 			top_level = self.get_top_link(wall, traverse=True)
@@ -597,11 +638,16 @@ class TranslatorArchicad2Revit(Translator):
 		ex = wall['baseLine']['end']['x']
 		ey = wall['baseLine']['end']['y']
 
-		fix = wall['thickness'] / 2
+		fix = wall['thickness'] / 2 if wall['thickness'] else 0
 		out = wall['offsetFromOutside'] if wall['offsetFromOutside'] else 0
 
+		flip = -1 if wall['flipped'] == True else 1
+		direction = self.get_vector_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
+
+		body = self.get_material_body(wall)
+
 		overrides = {
-			'type': str(wall['structure']) + ' ' + str(wall['thickness']),
+			'type': f'{body}',
 			'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
@@ -614,8 +660,6 @@ class TranslatorArchicad2Revit(Translator):
 		# straight walls
 		if not wall['arcAngle']:
 
-			flip = -1 if wall['flipped'] == True else 1
-			direction = self.get_vector_direction({'start': {'x': sx, 'y': sy }, 'end': {'x': ex, 'y': ey}})
 			off_x = (out - fix) * direction['y'] * flip * -1
 			off_y = (out - fix) * direction['x'] * flip
 
@@ -711,10 +755,12 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		wido = speckle_object
 		general = self.get_general_parameters(wido)
+		properties = self.get_element_properties(wido)
+		orient = properties.get('BIM', {}).get('spk_wido_orient', None) if properties else None
 		points = parameters['points']
 
-		wido_id = general.get('Element ID', '')
-		typo = f'{wido['libraryPart']} {wido['width']}x{wido['height']} {str(wido_id)}'
+		# wido_id = general.get('Element ID', '')
+		typo = f'{wido['libraryPart']} {wido['width']}x{wido['height']} {str(orient)}'
 
 		overrides = {
 			'type': typo,
@@ -754,7 +800,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		properties = self.get_element_properties(zone)
 		general = properties.get('General Parameters', {})
-		group = properties.get('ZONESUM', {})
+		group = properties.get('ZONESUM', {}) # prop group
 
 		area = general.get('Area', None)
 		category = group.get('spk_prop_category', 'n/a')
@@ -781,6 +827,9 @@ class TranslatorArchicad2Revit(Translator):
 			'type': 'Room',
 			'number': number,
 			'parameters': {
+				'ROOM_NUMBER': {
+					'value': zone['number']
+				},
 				'ROOM_OCCUPANCY': {
 					'value': category
 				},

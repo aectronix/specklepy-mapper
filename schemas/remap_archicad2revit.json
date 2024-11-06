@@ -158,6 +158,19 @@
 			"createView": true,
 			"referenceOnly": false
 		},
+		"parameter": {
+			"name": null,
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": null,
+			"applicationInternalName": null,
+			"applicationUnit": null,
+			"applicationUnitType": null,
+			"isReadOnly": false,
+			"isShared": false,
+			"isTypeParameter": false,
+			"units": null,
+			"value": null
+		},
 		"roof": {
 			"category": "Roofs",
 			"builtInCategory": "OST_Roofs",
@@ -191,6 +204,19 @@
 			"parameters": {
 				"speckle_type": "Base",
 				"applicationId": null,
+				"ROOM_NUMBER": {
+					"name": "Number",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOM_NUMBER",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": null
+				},
 				"ROOM_OCCUPANCY": {
 					"name": "Occupancy",
 					"speckle_type": "Objects.BuiltElements.Revit.Parameter",

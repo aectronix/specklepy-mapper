@@ -25,16 +25,16 @@ class App():
 			raise e
 
 	def translate(self, translator):
-		categories = [
-			'slab',
-			'wall'
-		]
-		speckle_object = self.speckle.retrieve('aeb487f0e6', '96af39c0cd')
-		a2r = TranslatorFactory.get(translator, client=self.speckle, speckle_object=speckle_object)
+
+		streamId = 'aeb487f0e6' # project id
+		commitId = 'f957f2f99f' # model / commid id
+
+		speckle_object = self.speckle.retrieve(streamId, commitId)
+		a2r = TranslatorFactory.get(translator, client=self.speckle, streamId = streamId, speckle_object=speckle_object)
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'aeb487f0e6', 'transfer', 'hvr-zones exp 1a3')
+		self.speckle.publish(speckle_object, streamId, 'zone', 'test4')
 
 if __name__ == "__main__":
 
