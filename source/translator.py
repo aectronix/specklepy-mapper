@@ -126,7 +126,7 @@ class TranslatorArchicad2Revit(Translator):
 		if 'elementProperties' in speckle_object:
 			return speckle_object['elementProperties']
 		else:
-			self.log.warning(f'No properties found for {speckle_object['elementType']}: $m({speckle_object['id']})')
+			self.log.warning(f"No properties found for {speckle_object['elementType']}: $m({speckle_object['id']})")
 		return None
 
 	def get_general_parameters(self, speckle_object):
@@ -138,7 +138,7 @@ class TranslatorArchicad2Revit(Translator):
 			if 'General Parameters' in properties:
 				return properties['General Parameters']
 			else:
-				self.log.warning(f'No parameters found for {speckle_object['elementType']}: $m({speckle_object['id']})')
+				self.log.warning(f"No parameters found for {speckle_object['elementType']}: $m({speckle_object['id']})")
 		return {}
 
 	def get_material_body(self, speckle_object):
@@ -147,11 +147,11 @@ class TranslatorArchicad2Revit(Translator):
 		Could be the name of object building material, composite or profile.
 		"""
 		structure = {
-		    'Basic': f'{speckle_object.get('buildingMaterialName')}',
-		    'Composite': f'{speckle_object.get('compositeName')}',
-		    'Profile': f'{speckle_object.get('profileName')}'
+		    'Basic': f"{speckle_object.get('buildingMaterialName')}",
+		    'Composite': f"{speckle_object.get('compositeName')}",
+		    'Profile': f"{speckle_object.get('profileName')}"
 		}
-		body = f'{structure[speckle_object['structure']]} ({speckle_object.get('thickness')}{speckle_object.get('units')})'
+		body = f"{structure[speckle_object['structure']]} ({speckle_object.get('thickness')}{speckle_object.get('units')})"
 		return body if body else None
 
 	def get_top_link(self, speckle_object, traverse=False):
@@ -176,7 +176,7 @@ class TranslatorArchicad2Revit(Translator):
 		Display some stats info
 		"""
 		total = self.client.query('get_total_count', 'aeb487f0e6', self.object.id, None)
-		self.log.info(f'Commit object entities: $m({total})')
+		self.log.info(f"Commit object entities: $m({total})")
 		for category in self.categories:
 			count = self.client.query('get_total_count', 'aeb487f0e6', self.object.id, self.schema['archicad'][category]['speckle_type'])
 			self.log.info(f'Total {category} objects: $m({count})')
@@ -211,7 +211,7 @@ class TranslatorArchicad2Revit(Translator):
 						speckle_object = collection['elements'][i]
 					)
 			else:
-				self.log.warning(f'Translation skipped for category: $y("{collection.name}")')
+				self.log.warning(f"Translation skipped for category: $y(\"{collection.name}\")")
 
 	# TODO !
 	def map_beam(self, speckle_object, **parameters):
@@ -700,7 +700,7 @@ class TranslatorArchicad2Revit(Translator):
 					sub['level'] = wall['level']
 					wall['elements'][e] = sub
 				else:
-					self.log.warning(f'Translation skipped for category: $y("{element['elementType']}")')
+					self.log.warning(f"Translation skipped for category: $y(\"{element['elementType']}\")")
 
 		return bos.recompose_base(wall)
 
@@ -714,7 +714,7 @@ class TranslatorArchicad2Revit(Translator):
 		points = parameters['points']
 
 		wido_id = general.get('Element ID', '')
-		typo = f'{wido['libraryPart']} {wido['width']}x{wido['height']} {str(wido_id)}'
+		typo = f"{wido['libraryPart']} {wido['width']}x{wido['height']} {str(wido_id)}"
 
 		overrides = {
 			'type': typo,

@@ -25,16 +25,13 @@ class App():
 			raise e
 
 	def translate(self, translator):
-		categories = [
-			'slab',
-			'wall'
-		]
-		speckle_object = self.speckle.retrieve('aeb487f0e6', '96af39c0cd')
+		categories = []
+		speckle_object = self.speckle.retrieve('aeb487f0e6', '9b4ed68f58')
 		a2r = TranslatorFactory.get(translator, client=self.speckle, speckle_object=speckle_object)
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'aeb487f0e6', 'transfer', 'hvr-zones exp 1a3')
+		self.speckle.publish(speckle_object, 'aeb487f0e6', 'main', 'test exp')
 
 if __name__ == "__main__":
 
@@ -45,8 +42,8 @@ if __name__ == "__main__":
 	cmd.add_argument('-t', '--translator', required=False, help='translator scheme')
 	arg = cmd.parse_args()
 
-	print (f'{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} initializing...')
+	print (f"{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} initializing...")
 	app = App(['speckle'])
 	app.translate('Archicad2Revit')
 
-	print (f'{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} completed in {round(time.time() - ts, 2)} sec')
+	print (f"{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} completed in {round(time.time() - ts, 2)} sec")

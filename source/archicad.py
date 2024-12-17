@@ -1,5 +1,4 @@
 import json
-import tapir_py
 import urllib.request
 
 from archicad import ACConnection
@@ -26,7 +25,7 @@ class ArchicadWrapper():
 				self.types = client.types
 				self.utilities = client.utilities
 				self.tapir = TapirWrapper(port=self.port)
-				print(f'Connected to Archicad: {commands.GetProductInfo()}, port: {self.port}, Tapir: {type(self.tapir)}')
+				print(f"Connected to Archicad: {commands.GetProductInfo()}, port: {self.port}, Tapir: {type(self.tapir)}")
 		except Exception as e:
 			raise e
 
