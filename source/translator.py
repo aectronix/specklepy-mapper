@@ -11,6 +11,33 @@ from specklepy.serialization.base_object_serializer import BaseObjectSerializer
 
 from .logging import LogWrapper
 
+LOC = {
+	'general_parameters': {
+		'en': 'General Parameters',
+		'ua': 'Загальн  '
+	},
+	'top_link_story': {
+		'en': 'Top Link Story',
+		'ua': 'Поверх верхньої прив’язки'
+	},
+	'cross_section_width_bottom_start_cut': {
+		'en': 'Cross Section Width at Bottom Start (cut)',
+		'ua': 'Ширина поперечного перетину внизу  на початку (зріз)'
+	},
+	'cross_section_height_bottom_start_cut': {
+		'en': 'Cross Section Height at Bottom Start (cut)',
+		'ua': 'Висота поперечного перетину внизу  на початку (зріз)'
+	},
+	'bottom_elevation_home_story': {
+		'en': 'Bottom Elevation To Home Story',
+		'ua': 'Нижня висотна відмітка відносно вихідного поверху'
+	},
+	'top_elevation_home_story': {
+		'en': 'Top Elevation To Home Story',
+		'ua': 'Верхня висотна відмітка відносно вихідного поверху'
+	}
+}
+
 class TranslatorFactory:
 
 	@staticmethod
@@ -27,6 +54,7 @@ class Translator(ABC):
 		self.client = client
 		self.object = speckle_object
 		self.wrapper = wrapper
+		self.parameters = parameters
 
 	def add_collection(self, name, typename, **parameters):
 		collection = Collection()
@@ -111,6 +139,7 @@ class TranslatorArchicad2Revit(Translator):
 		self.schema = self.get_schema('remap_archicad2revit')
 		self.categories = self.get_filtered_categories(parameters)
 		self.collections = {}
+		self.parameters = parameters
 
 	def get_filtered_categories(self, parameters):
 		"""
@@ -135,8 +164,8 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		properties = self.get_element_properties(speckle_object)
 		if properties:
-			if 'General Parameters' in properties:
-				return properties['General Parameters']
+			if LOC['general_parameters'][self.parameters['loc']] in properties:
+				return properties[LOC['general_parameters'][self.parameters['loc']]]
 			else:
 				self.log.warning(f"No parameters found for {speckle_object['elementType']}: $m({speckle_object['id']})")
 		return {}
@@ -160,7 +189,7 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		general = self.get_general_parameters(speckle_object)
 		top_level = None
-		top_link = general.get('Top Link Story', '')
+		top_link = general.get(LOC['top_link_story'][self.parameters['loc']], '')
 		top_link_ref = re.search(r'\+ (\d+)', top_link)
 		if top_link_ref and top_link_ref.group(1) and hasattr(self.object, '@levels'):
 			top_link_idx = speckle_object['level']['index'] + int(top_link_ref.group(1))
@@ -243,8 +272,8 @@ class TranslatorArchicad2Revit(Translator):
 			surface = ' ' + str(beam['segments']['Segment #1']['topMaterial'])
 
 		general = self.get_general_parameters(beam)
-		width = general.get('Cross Section Width at Bottom Start (cut')
-		height = general.get('Cross Section Height at Bottom Start (cut')
+		width = general.get(LOC['cross_section_width_bottom_start_cut'][self.parameters['loc']])
+		height = general.get(LOC['cross_section_height_bottom_start_cut'][self.parameters['loc']])
 		typo = f'{material} {width}x{height}{surface}'
 
 		overrides = {
@@ -345,8 +374,8 @@ class TranslatorArchicad2Revit(Translator):
 			""" shaft openings in slabs, roofs, meshes? """
 			opening = speckle_object
 			general = self.get_general_parameters(opening)
-			btm_offset = general.get('Bottom Elevation To Home Story', 0) if general else 0
-			top_offset = general.get('Top Elevation To Home Story', 0) if general else 0
+			btm_offset = general.get(LOC['bottom_elevation_home_story'][self.parameters['loc']], 0) if general else 0
+			top_offset = general.get(LOC['top_elevation_home_story'][self.parameters['loc']], 0) if general else 0
 			altitude = top_offset - btm_offset
 
 			opening.setdefault('bottomLevel', parameters['host_level'])
@@ -477,7 +506,7 @@ class TranslatorArchicad2Revit(Translator):
 		floor = bos.traverse_base(speckle_object)[1]
 
 		general = self.get_general_parameters(floor)
-		top_offset = general.get('Top Elevation To Home Story', 0) if general else 0  # revit uses top elevation
+		top_offset = general.get(LOC['general_parameters'][self.parameters['loc']], 0) if general else 0  # revit uses top elevation
 		body = self.get_material_body(floor)
 
 		overrides = {
@@ -761,7 +790,7 @@ class TranslatorArchicad2Revit(Translator):
 		zone = bos.traverse_base(speckle_object)[1]
 
 		properties = self.get_element_properties(zone)
-		general = properties.get('General Parameters', {})
+		general = properties.get(LOC['top_elevation_home_story'][self.parameters['loc']], {})
 		group = properties.get('ZONESUM', {})
 
 		area = general.get('Area', None)
