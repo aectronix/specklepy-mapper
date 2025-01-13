@@ -40,11 +40,11 @@ if __name__ == "__main__":
 	cmd = argparse.ArgumentParser()
 	cmd.add_argument('-p', '--port', required=False, help='archicad port')
 	cmd.add_argument('-t', '--translator', required=False, help='translator scheme')
-	cmd.add_argument('-l', '--localisation', required=False, help='ac localisation')
+	cmd.add_argument('-l', '--localization', required=False, help='ac localization')
 	arg = cmd.parse_args()
 
 	print (f"{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} initializing...")
 	app = App(['speckle'])
-	app.translate('Archicad2Revit', arg.localisation)
+	app.translate('Archicad2Revit', arg.localization)
 
 	print (f"{datetime.now().strftime('%H:%M:%S')}:{int(datetime.now().microsecond/1000):03d} completed in {round(time.time() - ts, 2)} sec")
