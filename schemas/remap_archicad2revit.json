@@ -15,8 +15,17 @@
 		"roof": {
 			"speckle_type": "Objects.BuiltElements.Roof:Objects.BuiltElements.Archicad.ArchicadShellBase:Objects.BuiltElements.Archicad.ArchicadRoof"
 		},
+		"mesh": {
+			"speckle_type": "Objects.BuiltElements.Archicad.DirectShape"
+		},
+		"morph": {
+			"speckle_type": "Objects.BuiltElements.Archicad.DirectShape"
+		},
 		"slab": {
 			"speckle_type": "Objects.BuiltElements.Floor:Objects.BuiltElements.Archicad.ArchicadFloor"
+		},
+		"stair": {
+			"speckle_type": "Objects.BuiltElements.Archicad.DirectShape"
 		},
 		"wall": {
 			"speckle_type": "Objects.BuiltElements.Wall:Objects.BuiltElements.Archicad.ArchicadWall"
@@ -158,6 +167,24 @@
 			"createView": true,
 			"referenceOnly": false
 		},
+		"mass": {
+			"category": "Mass",
+			"builtInCategory": "OST_Mass",
+			"speckle_type": "Objects.Other.Revit.RevitInstance"
+		},
+		"parameter": {
+			"name": null,
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": null,
+			"applicationInternalName": null,
+			"applicationUnit": null,
+			"applicationUnitType": null,
+			"isReadOnly": false,
+			"isShared": false,
+			"isTypeParameter": false,
+			"units": null,
+			"value": null
+		},
 		"roof": {
 			"category": "Roofs",
 			"builtInCategory": "OST_Roofs",
@@ -191,6 +218,19 @@
 			"parameters": {
 				"speckle_type": "Base",
 				"applicationId": null,
+				"ROOM_NUMBER": {
+					"name": "Number",
+					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+					"applicationId": null,
+					"applicationInternalName": "ROOM_NUMBER",
+					"applicationUnit": null,
+					"applicationUnitType": null,
+					"isReadOnly": false,
+					"isShared": false,
+					"isTypeParameter": false,
+					"units": null,
+					"value": null
+				},
 				"ROOM_OCCUPANCY": {
 					"name": "Occupancy",
 					"speckle_type": "Objects.BuiltElements.Revit.Parameter",
@@ -261,6 +301,11 @@
 				"closed": true,
 				"segments": []
 			}
+		},
+		"topography": {
+			"category": null,
+			"builtInCategory": "OST_Topography",
+			"speckle_type": "Objects.BuiltElements.Topography:Objects.BuiltElements.Revit.RevitTopography"
 		},
 		"wall": {
 			"category": "Walls",

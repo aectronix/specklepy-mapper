@@ -395,10 +395,11 @@ class TranslatorArchicad2Revit(Translator):
 			"""
 			return speckle_object
 
-		if parameters['host'] == 'slab' or parameters['host'] == 'roof':
-			return map_opening_horizontal(speckle_object, **parameters)
-		elif parameters['host'] == 'wall':
-			return map_opening_vertical(speckle_object, **parameters)
+		if parameters.get('host'):
+			if parameters['host'] == 'slab' or parameters['host'] == 'roof':
+				return map_opening_horizontal(speckle_object, **parameters)
+			elif parameters['host'] == 'wall':
+				return map_opening_vertical(speckle_object, **parameters)
 
 	# TODO !
 	def map_railing(self, speckle_object, **parameters):
@@ -543,6 +544,13 @@ class TranslatorArchicad2Revit(Translator):
 					floor['elements'][e] = shaft
 
 		return bos.recompose_base(floor)
+
+	# TODO !
+	def map_stair(self, speckle_object, **parameters):
+		"""
+		Remap stair schema
+		"""
+		return speckle_object
 
 	def map_story(self, story, **parameters):
 		"""
