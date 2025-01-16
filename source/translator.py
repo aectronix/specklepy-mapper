@@ -448,8 +448,16 @@ class TranslatorArchicad2Revit(Translator):
 		btm_offset = general.get('Bottom Elevation To Home Story', 0)
 		body = self.get_material_body(roof)
 
+		material = roof['structure']
+		if roof['structure'] == 'Basic':
+			roof = roof['buildingMaterialName']
+		elif roof['structure'] == 'Composite':
+			material = roof['compositeName']
+		elif roof['structure'] == 'Profile':
+			material = roof['profileName']
+
 		overrides = {
-			'type': body,
+			'type': str(material) + ' (' + str(roof['thickness']) + ')',
 			'TopElevationToHomeStory': btm_offset,
 			'parameters': {
 				'ROOF_LEVEL_OFFSET_PARAM': {
@@ -509,8 +517,16 @@ class TranslatorArchicad2Revit(Translator):
 		top_offset = general.get(LOC['general_parameters'][self.parameters['loc']], 0) if general else 0  # revit uses top elevation
 		body = self.get_material_body(floor)
 
+		material = floor['structure']
+		if floor['structure'] == 'Basic':
+			material = floor['buildingMaterialName']
+		elif floor['structure'] == 'Composite':
+			material = floor['compositeName']
+		elif floor['structure'] == 'Profile':
+			material = floor['profileName']
+
 		overrides = {
-			'type': body,
+			'type': str(material) + ' (' + str(floor['thickness']) + ')' ,
 			'TopElevationToHomeStory': top_offset,
 			'parameters': {
 				'FLOOR_HEIGHTABOVELEVEL_PARAM': {
@@ -627,6 +643,14 @@ class TranslatorArchicad2Revit(Translator):
 			'Core Inside': (5, -1)	# Core Face: Inside
 		}
 
+		material = wall['structure']
+		if wall['structure'] == 'Basic':
+			material = wall['buildingMaterialName']
+		elif wall['structure'] == 'Composite':
+			material = wall['compositeName']
+		elif wall['structure'] == 'Profile':
+			material = wall['profileName']
+
 		# ref line coordinates
 		sx = wall['baseLine']['start']['x']
 		sy = wall['baseLine']['start']['y']
@@ -638,7 +662,7 @@ class TranslatorArchicad2Revit(Translator):
 		out = wall['offsetFromOutside'] if wall['offsetFromOutside'] else 0
 
 		overrides = {
-			'type': str(wall['structure']) + ' ' + str(wall['thickness']),
+			'type': str(material) + ' (' + str(wall['thickness']) + ') -' + str(wall['layer']) + ')',
 			'topLevel': top_level,
 			'topOffset': wall['topOffset'],
 			'parameters': {
