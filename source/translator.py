@@ -14,7 +14,7 @@ from .logging import LogWrapper
 LOC = {
 	'general_parameters': {
 		'en': 'General Parameters',
-		'ua': 'Загальн  '
+		'ua': 'Загальн '
 	},
 	'top_link_story': {
 		'en': 'Top Link Story',
@@ -35,6 +35,14 @@ LOC = {
 	'top_elevation_home_story': {
 		'en': 'Top Elevation To Home Story',
 		'ua': 'Верхня висотна відмітка відносно вихідного поверху'
+	},
+	'door': {
+		'en': 'door',
+		'ua': 'двері'
+	},
+	'window': {
+		'en': 'window',
+		'ua': 'вікно'
 	}
 }
 
@@ -292,6 +300,24 @@ class TranslatorArchicad2Revit(Translator):
 		}
 		beam = self.override_schema(beam, self.schema['revit']['beam'], overrides)
 
+		properties = self.get_element_properties(beam)
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+		
+		beam['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
+
 		return bos.recompose_base(beam)
 
 	# TODO !
@@ -328,6 +354,25 @@ class TranslatorArchicad2Revit(Translator):
 			'topOffset': top_offset,
 		}
 		column = self.override_schema(column, self.schema['revit']['column'], overrides)
+
+		properties = self.get_element_properties(column)
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+		
+		column['parameters'] = {}
+		column['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
 
 		return bos.recompose_base(column)
 
@@ -450,7 +495,7 @@ class TranslatorArchicad2Revit(Translator):
 
 		material = roof['structure']
 		if roof['structure'] == 'Basic':
-			roof = roof['buildingMaterialName']
+			material = roof['buildingMaterialName']
 		elif roof['structure'] == 'Composite':
 			material = roof['compositeName']
 		elif roof['structure'] == 'Profile':
@@ -501,6 +546,24 @@ class TranslatorArchicad2Revit(Translator):
 					'angleRadians': segment['angleRadians']
 				}
 				roof['outline']['segments'][i] = self.override_schema(segment, self.schema['revit']['floor_segment_curved'], overrides_segment)
+
+		properties = self.get_element_properties(roof)
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+		
+		roof['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
 
 		roof = self.override_schema(roof, self.schema['revit']['roof'], overrides)
 
@@ -578,6 +641,7 @@ class TranslatorArchicad2Revit(Translator):
 			for e in range (0, len(floor['elements'])):
 				element = floor['elements'][e]
 				element_type = element['elementType'].lower()
+				if element_type == 'отвір': element_type = 'opening'
 				if element_type in self.categories:
 					shaft = self.map_opening(
 						speckle_object = floor['elements'][e],
@@ -587,6 +651,24 @@ class TranslatorArchicad2Revit(Translator):
 						host_top_offset = top_offset
 					)
 					floor['elements'][e] = shaft
+
+		properties = self.get_element_properties(floor)
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+		
+		floor['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
 
 		return bos.recompose_base(floor)
 
@@ -751,6 +833,11 @@ class TranslatorArchicad2Revit(Translator):
 			for e in range (0, len(wall['elements'])):
 				element = wall['elements'][e]
 				element_type = element['elementType'].lower()
+				# element_type = LOC[element_type][self.parameters['loc']]
+				# print (element_type)
+				if element_type == 'двері': element_type = 'door'
+				if element_type == 'вікно': element_type = 'window'
+				if element_type == 'отвір': element_type = 'opening'
 				if element_type in self.categories:
 					sub_mapper = getattr(self, 'map_' + element_type)
 					sub = sub_mapper(
@@ -762,6 +849,24 @@ class TranslatorArchicad2Revit(Translator):
 					wall['elements'][e] = sub
 				else:
 					self.log.warning(f"Translation skipped for category: $y(\"{element['elementType']}\")")
+
+		properties = self.get_element_properties(wall)
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+		
+		wall['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
 
 		return bos.recompose_base(wall)
 
@@ -794,7 +899,29 @@ class TranslatorArchicad2Revit(Translator):
 				]
 			}
 		}
-		wido = self.override_schema(wido, self.schema['revit'][wido['elementType'].lower()], overrides)
+
+		element_type = ''
+		if wido['elementType'] == 'Двері': element_type = 'door'
+		if wido['elementType'] == 'Вікно': element_type = 'window'
+
+		wido = self.override_schema(wido, self.schema['revit'][element_type.lower()], overrides)
+
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+
+		wido['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
 
 		return wido
 
@@ -824,6 +951,9 @@ class TranslatorArchicad2Revit(Translator):
 		number = group.get('spk_prop_num', None)
 		gid = group.get('spk_prop_gid', None)
 
+		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
+		div = group_b.get('RLL-Частина будівлі', None)
+
 		for segment in zone['outline']['segments']:
 			obs = BaseObjectSerializer()
 
@@ -845,12 +975,29 @@ class TranslatorArchicad2Revit(Translator):
 				'ROOM_OCCUPANCY': {
 					'value': category
 				},
+				'ROOM_NUMBER': {
+					'value': number
+				},
 				'ROOM_DEPARTMENT': {
 					'value': function
 				}
 			}
 		}
 		room = self.override_schema(zone, self.schema['revit']['room'], overrides)
+
+		room['parameters']['MRT_Division'] = {
+			"name": "MRT_Division",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Division",
+			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			"units": "m",
+			"value": div
+		}
 
 		# todo: fix this method
 		room['parameters']['4ff65744-b44a-40a8-a428-d9b649e4173b'] = {
