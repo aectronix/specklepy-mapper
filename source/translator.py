@@ -376,6 +376,7 @@ class TranslatorArchicad2Revit(Translator):
 		properties = self.get_element_properties(column)
 		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
 		div = group_b.get('RLL-Частина будівлі', None)
+		role = group_b.get('spk_prop_discipline', None)
 
 		column['parameters']['MRT_Division'] = {
 			"name": "MRT_Division",
@@ -389,6 +390,20 @@ class TranslatorArchicad2Revit(Translator):
 			"isTypeParameter": False,
 			'units': None,
 			"value": div
+		}
+
+		column['parameters']['MRT_Discipline'] = {
+			"name": "MRT_Discipline",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "MRT_Discipline",
+			"applicationUnit": None,
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			'units': None,
+			"value": role
 		}
 
 		return bos.recompose_base(column)
