@@ -16,6 +16,10 @@ LOC = {
 		'en': 'General Parameters',
 		'ua': 'Загальн '
 	},
+	'element_id': {
+		'en': 'Element ID',
+		'ua': 'ID Елементу'
+	},
 	'top_link_story': {
 		'en': 'Top Link Story',
 		'ua': 'Поверх верхньої прив’язки'
@@ -35,6 +39,10 @@ LOC = {
 	'top_elevation_home_story': {
 		'en': 'Top Elevation To Home Story',
 		'ua': 'Верхня висотна відмітка відносно вихідного поверху'
+	},
+	'bottom_elevation_project_zero': {
+		'en': 'Bottom Elevation To Project Zero',
+		'ua': "відмітка до нуля хххх"
 	},
 	'door': {
 		'en': 'door',
@@ -208,6 +216,15 @@ class TranslatorArchicad2Revit(Translator):
 					return level
 		return None
 
+	def get_link(self, name=None):
+		if name:
+			for collection in self.object['elements']:
+				if collection.name == 'Slab':
+					for s in collection['elements']:
+						if s['level']['name'] == name:
+							return BaseObjectSerializer().traverse_base(s['level'])[1]
+		return None
+
 	def log_stats(self):
 		"""
 		Display some stats info
@@ -227,7 +244,7 @@ class TranslatorArchicad2Revit(Translator):
 		# for i in range(-10, 20):
 		# 	story = self.client.query('get_level_data', 'aeb487f0e6', self.object.id, i)
 		# 	if story:
-		# 		self.log.info(f'Level found: $y("{story['name']}"), $m({story['elevation']})')
+		# 		self.log.info(f"Level found: $y(\"{story['name']}\"), $m({story['elevation']})")
 		# 		level = self.map_story(story)
 		# 		self.object['@levels']['elements'].append(level)
 
@@ -417,23 +434,35 @@ class TranslatorArchicad2Revit(Translator):
 		"""
 		def map_opening_horizontal(speckle_object, **parameters):
 			""" shaft openings in slabs, roofs, meshes? """
-			opening = speckle_object
-			general = self.get_general_parameters(opening)
+			# opening = speckle_object
+
+			bos = BaseObjectSerializer()
+			opening = bos.traverse_base(speckle_object)[1]
+
+			properties = self.get_element_properties(opening)
+
+			group = properties.get('ОТВОРИ', {})
+			btm_level_name = group.get('spk_opening_level', None)
+			btm_level = self.get_link(name=btm_level_name)
+
+			general = properties.get(LOC['general_parameters'][self.parameters['loc']], {})
 			btm_offset = general.get(LOC['bottom_elevation_home_story'][self.parameters['loc']], 0) if general else 0
 			top_offset = general.get(LOC['top_elevation_home_story'][self.parameters['loc']], 0) if general else 0
+			btm_elevation = general.get(LOC['bottom_elevation_project_zero'][self.parameters['loc']], 0) if general else 0
+			if not top_offset: top_offset = 0
 			altitude = top_offset - btm_offset
 
-			opening.setdefault('bottomLevel', parameters['host_level'])
-			opening.setdefault('topLevel', parameters['host_level'])
+			opening.setdefault('bottomLevel', btm_level)
+			opening.setdefault('topLevel', btm_level)
 
 			overrides = {
-				'height': altitude,
+				# 'height': height,
 				'parameters': {
 					'WALL_BASE_OFFSET': {
 						'value': btm_offset,
 					},
 					'WALL_TOP_OFFSET': {
-						'value': top_offset,
+						'value': top_offset
 					}
 				},
 				'outline': {
@@ -461,7 +490,10 @@ class TranslatorArchicad2Revit(Translator):
 						coords[0], coords[1], coords[2],
 						traverse=True))
 
-			return shaft
+			# return shaft
+
+			return bos.recompose_base(shaft)
+
 
 		def map_opening_vertical(speckle_object, **parameters):
 			""" shaft openings in walls
@@ -474,6 +506,9 @@ class TranslatorArchicad2Revit(Translator):
 				return map_opening_horizontal(speckle_object, **parameters)
 			elif parameters['host'] == 'wall':
 				return map_opening_vertical(speckle_object, **parameters)
+		else:
+			# ref
+			return map_opening_horizontal(speckle_object, **parameters)
 
 	# TODO !
 	def map_railing(self, speckle_object, **parameters):
@@ -636,21 +671,21 @@ class TranslatorArchicad2Revit(Translator):
 
 		floor = self.override_schema(floor, self.schema['revit']['floor'], overrides)
 
-		# process sub elements
-		if floor.get('elements', None):
-			for e in range (0, len(floor['elements'])):
-				element = floor['elements'][e]
-				element_type = element['elementType'].lower()
-				if element_type == 'отвір': element_type = 'opening'
-				if element_type in self.categories:
-					shaft = self.map_opening(
-						speckle_object = floor['elements'][e],
-						host = floor['elementType'].lower(),
-						host_level = floor['level'],
-						host_thickness = floor['thickness'],
-						host_top_offset = top_offset
-					)
-					floor['elements'][e] = shaft
+		# # process sub elements
+		# if floor.get('elements', None):
+		# 	for e in range (0, len(floor['elements'])):
+		# 		element = floor['elements'][e]
+		# 		element_type = element['elementType'].lower()
+		# 		# if element_type == 'отвір': element_type = 'opening'
+		# 		if element_type in self.categories:
+		# 			shaft = self.map_opening(
+		# 				speckle_object = floor['elements'][e],
+		# 				host = floor['elementType'].lower(),
+		# 				host_level = floor['level'],
+		# 				host_thickness = floor['thickness'],
+		# 				host_top_offset = top_offset
+		# 			)
+		# 			floor['elements'][e] = shaft
 
 		properties = self.get_element_properties(floor)
 		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
@@ -879,8 +914,8 @@ class TranslatorArchicad2Revit(Translator):
 		general = self.get_general_parameters(wido)
 		points = parameters['points']
 
-		wido_id = general.get('Element ID', '')
-		typo = f"{wido['libraryPart']} {wido['width']}x{wido['height']} {str(wido_id)}"
+		wido_id = general.get(LOC['element_id'][self.parameters['loc']], '')
+		typo = f"{wido['libraryPart']} {wido['width']}x{wido['height']} M{wido['revealDepthFromSide']} {str(wido_id)}"
 
 		overrides = {
 			'type': typo,
@@ -941,15 +976,23 @@ class TranslatorArchicad2Revit(Translator):
 		zone = bos.traverse_base(speckle_object)[1]
 
 		properties = self.get_element_properties(zone)
-		general = properties.get(LOC['top_elevation_home_story'][self.parameters['loc']], {})
+		general = properties.get(LOC['general_parameters'][self.parameters['loc']], {})
 		group = properties.get('ZONESUM', {})
+		zones = properties.get('ЗОНИ', {})
 
-		area = general.get('Area', None)
-		category = group.get('spk_prop_category', 'n/a')
-		typo = group.get('spk_prop_type', None)
-		function = group.get('spk_prop_func', None)
+		# area = general.get('Area', None)
+		# category = group.get('spk_prop_category', 'n/a')
+
+		# new
+		gid = zones.get('spk_prop_gid', None)
+		location = group.get('ЛОКАЦИЯ Квартира', None)
 		number = group.get('spk_prop_num', None)
-		gid = group.get('spk_prop_gid', None)
+		function = zones.get('spk_prop_func', None)
+		coef = zones.get('spk_prop_coef', None)
+		prop_flat = zones.get('spk_prop_flat', None)
+		prop_total = zones.get('spk_prop_total', None)
+		prop_living = zones.get('spk_prop_living', None)
+		typo = zones.get('spk_prop_type', None)
 
 		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
 		div = group_b.get('RLL-Частина будівлі', None)
@@ -973,7 +1016,7 @@ class TranslatorArchicad2Revit(Translator):
 			'number': number,
 			'parameters': {
 				'ROOM_OCCUPANCY': {
-					'value': category
+					'value': ''
 				},
 				'ROOM_NUMBER': {
 					'value': number
@@ -990,70 +1033,106 @@ class TranslatorArchicad2Revit(Translator):
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 
-		# todo: fix this method
-		room['parameters']['4ff65744-b44a-40a8-a428-d9b649e4173b'] = {
-			'name': 'MRT_A_RoomFixedArea',
-			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-			'applicationId': None,
-			'applicationInternalName': '4ff65744-b44a-40a8-a428-d9b649e4173b',
+		room['parameters']['RLL_Позиція_Кв'] = {
+			"name": "RLL_Позиція_Кв",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "RLL_Позиція_Кв",
+			"applicationUnit": None,
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			'units': None,
+			"value": location
+		}
+
+		room['parameters']['ADSK_Номер квартиры'] = {
+			"name": "ADSK_Номер квартиры",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "ADSK_Номер квартиры",
+			"applicationUnit": None,
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			'units': None,
+			"value": gid
+		}
+		room['parameters']['ADSK_Коэффициент площади'] = {
+			"name": "ADSK_Коэффициент площади",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "ADSK_Коэффициент площади",
+			"applicationUnit": None,
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			'units': None,
+			"value": coef
+		}
+		room['parameters']['ADSK_Площадь квартиры'] = {
+			"name": "ADSK_Площадь квартиры",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "ADSK_Площадь квартиры",
 			'applicationUnit': 'autodesk.unit.unit:squareMeters-1.0.1',
-			'applicationUnitType': None,
-			'isReadOnly': False,
-			'isShared': True,
-			'isTypeParameter': False,
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
 			'units': 'm²',
-			'value': area
+			"value": prop_flat
 		}
-
-		room['parameters']['2aaea987-7ae4-4484-8062-fbd77fc0bfbd'] = {
-			'name': 'MRT_A_ApartmentType',
-			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-			'applicationId': None,
-			'applicationInternalName': '2aaea987-7ae4-4484-8062-fbd77fc0bfbd',
-			'applicationUnit': None,
-			'applicationUnitType': None,
-			'isReadOnly': False,
-			'isShared': True,
-			'isTypeParameter': False,
-			'units': None,
-			'value': typo
+		room['parameters']['ADSK_Площадь квартиры общая'] = {
+			"name": "ADSK_Площадь квартиры общая",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "ADSK_Площадь квартиры общая",
+			'applicationUnit': 'autodesk.unit.unit:squareMeters-1.0.1',
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			'units': 'm²',
+			"value": prop_total
+		}		
+		room['parameters']['ADSK_Площадь квартиры жилая'] = {
+			"name": "ADSK_Площадь квартиры жилая",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "ADSK_Площадь квартиры жилая",
+			'applicationUnit': 'autodesk.unit.unit:squareMeters-1.0.1',
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
+			'units': 'm²',
+			"value": prop_living
 		}
-
-		room['parameters']['1f06fc4b-03e4-4ea2-917e-cf475cc0ea73'] = {
-			'name': 'MRT_A_ApartmentID',
-			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-			'applicationId': None,
-			'applicationInternalName': '1f06fc4b-03e4-4ea2-917e-cf475cc0ea73',
-			'applicationUnit': None,
-			'applicationUnitType': None,
-			'isReadOnly': False,
-			'isShared': True,
-			'isTypeParameter': False,
+		room['parameters']['ADSK_Тип помещения'] = {
+			"name": "ADSK_Тип помещения",
+			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
+			"applicationId": None,
+			"applicationInternalName": "ADSK_Тип помещения",
+			"applicationUnit": None,
+			"applicationUnitType": None,
+			"isReadOnly": False,
+			"isShared": False,
+			"isTypeParameter": False,
 			'units': None,
-			'value': gid
-		}
-
-		room['parameters']['75894bf8-8997-40ee-9130-d3dd46b1e109'] = {
-			'name': 'MRT_A_RoomMod',
-			'speckle_type': 'Objects.BuiltElements.Revit.Parameter',
-			'applicationId': None,
-			'applicationInternalName': '75894bf8-8997-40ee-9130-d3dd46b1e109',
-			'applicationUnit': None,
-			'applicationUnitType': None,
-			'isReadOnly': False,
-			'isShared': True,
-			'isTypeParameter': False,
-			'units': None,
-			'value': 1
+			"value": typo
 		}
 
 		return bos.recompose_base(room)
