@@ -326,12 +326,12 @@ class TranslatorArchicad2Revit(Translator):
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 
@@ -357,11 +357,11 @@ class TranslatorArchicad2Revit(Translator):
 		else:
 			top_offset = column['topOffset']
 
-		typo = "Col"
+		typo = "Column"
 		if column['segments']['Segment #1']['assemblySegmentData']['modelElemStructureType'] == 'Complex Profile':
-			typo = column['segments']['Segment #1']['assemblySegmentData']['profileAttrName'] + ' ' + str(height) + 'x' + str(width)
+			typo = column['segments']['Segment #1']['assemblySegmentData']['profileAttrName'] + ' ' + str(height) + 'x' + str(width) + ' H: ' + str(column['height'])
 		else:
-			typo = column['segments']['Segment #1']['assemblySegmentData']['buildingMaterial'] + ' ' + str(height) + 'x' + str(width)
+			typo = column['segments']['Segment #1']['assemblySegmentData']['buildingMaterial'] + ' ' + str(height) + 'x' + str(width) + ' H: ' + str(column['height'])
 
 		overrides = {
 			'type': typo,
@@ -369,25 +369,25 @@ class TranslatorArchicad2Revit(Translator):
 			'rotation': column['slantDirectionAngle'],
 			'baseOffset': column['bottomOffset'],
 			'topOffset': top_offset,
+			'parameters': {}
 		}
 		column = self.override_schema(column, self.schema['revit']['column'], overrides)
 
 		properties = self.get_element_properties(column)
 		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
 		div = group_b.get('RLL-Частина будівлі', None)
-		
-		column['parameters'] = {}
+
 		column['parameters']['MRT_Division'] = {
 			"name": "MRT_Division",
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 
@@ -591,12 +591,12 @@ class TranslatorArchicad2Revit(Translator):
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 
@@ -696,12 +696,12 @@ class TranslatorArchicad2Revit(Translator):
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 
@@ -894,12 +894,12 @@ class TranslatorArchicad2Revit(Translator):
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 
@@ -911,11 +911,15 @@ class TranslatorArchicad2Revit(Translator):
 		Remap door and window schema.
 		"""
 		wido = speckle_object
+		properties = self.get_element_properties(wido)
 		general = self.get_general_parameters(wido)
 		points = parameters['points']
 
+		group = properties.get('ЗАПОВНЕННЯ ВІКОННИХ ОТВОРІВ', {})
+		ori = group.get('Орієнтація віконного заповнення')
+
 		wido_id = general.get(LOC['element_id'][self.parameters['loc']], '')
-		typo = f"{wido['libraryPart']} {wido['width']}x{wido['height']} M{wido['revealDepthFromSide']} {str(wido_id)}"
+		typo = f"{wido['libraryPart']} {wido['width']}x{wido['height']} M:{wido['revealDepthFromSide']} O: {ori} - Id: {str(wido_id)}"
 
 		overrides = {
 			'type': typo,
@@ -923,6 +927,7 @@ class TranslatorArchicad2Revit(Translator):
 				'type': typo,
 			},
 			# todo: replace by speckle matrix methods!
+			'parameters': {},
 			'transform': {
 				'matrix': [
 					# displace by axes
@@ -937,24 +942,27 @@ class TranslatorArchicad2Revit(Translator):
 
 		element_type = ''
 		if wido['elementType'] == 'Двері': element_type = 'door'
+		else: element_type = 'door'
 		if wido['elementType'] == 'Вікно': element_type = 'window'
+		else: element_type = 'window'
 
 		wido = self.override_schema(wido, self.schema['revit'][element_type.lower()], overrides)
 
 		group_b = properties.get('ІНФОРМАЦІЯ ПРО БУДИНОК', {})
 		div = group_b.get('RLL-Частина будівлі', None)
 
+		# wido['parameters'] = {}
 		wido['parameters']['MRT_Division'] = {
 			"name": "MRT_Division",
 			"speckle_type": "Objects.BuiltElements.Revit.Parameter",
 			"applicationId": None,
 			"applicationInternalName": "MRT_Division",
-			"applicationUnit": "autodesk.unit.unit:meters-1.0.1",
+			"applicationUnit": None,
 			"applicationUnitType": None,
 			"isReadOnly": False,
 			"isShared": False,
 			"isTypeParameter": False,
-			"units": "m",
+			'units': None,
 			"value": div
 		}
 

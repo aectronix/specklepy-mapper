@@ -26,12 +26,12 @@ class App():
 
 	def translate(self, translator, loc='en'):
 		categories = []
-		speckle_object = self.speckle.retrieve('aeb487f0e6', '1853904eb1')
+		speckle_object = self.speckle.retrieve('aeb487f0e6', '80d3752f8c')
 		a2r = TranslatorFactory.get(translator, client=self.speckle, speckle_object=speckle_object, loc=loc)
 
 		a2r.map()
 
-		self.speckle.publish(speckle_object, 'aeb487f0e6', 'slab', 'slab opening 3.91 exp')
+		self.speckle.publish(speckle_object, 'aeb487f0e6', 'test', 'columns props 1.8a exp')
 
 if __name__ == "__main__":
 

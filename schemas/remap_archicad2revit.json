@@ -95,7 +95,11 @@
 			"topLevel": null,
 			"baseOffset": null,
 			"topOffset": null,
-			"rotation": null
+			"rotation": null,
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null
+			}
 		},
 		"door": {
 			"category": "Doors",
@@ -109,6 +113,10 @@
 				"type": null,
 				"placementType": "OneLevelBasedHosted",
 				"units": "m"
+			},
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null
 			},
 			"transform": {
 				"speckle_type": "Objects.Other.Transform",
@@ -366,6 +374,10 @@
 				"type": null,
 				"placementType": "OneLevelBasedHosted",
 				"units": "m"
+			},
+			"parameters": {
+				"speckle_type": "Base",
+				"applicationId": null
 			},
 			"transform": {
 				"speckle_type": "Objects.Other.Transform",
